@@ -78,38 +78,43 @@ chunk1 = np.array([sin(314.159265 * (x / samp_rate_s)) for x in range(num_samps_
 chunk2 = np.array([sin(628.318520 * (x / samp_rate_s)) for x in range(num_samps_in_chunk)])
 chunk = np.stack((chunk1, chunk2), axis=1).reshape([1, num_samps_in_chunk, num_channels, 1])
 
-# Take FFT of chunk
-channel_1 = fft(chunk[0, :, 0, 0])
-channel_2 = fft(chunk[0, :, 1, 0])
-chunk_freq = np.abs(np.stack((channel_1[:num_inputs], channel_2[:num_inputs]), axis=1))
-chunk_freq = chunk_freq.reshape([1, num_inputs, num_channels, 1])
+def get_freqs(chunk, show=False):
+    # Take FFT of chunk
+    channel_1 = fft(chunk[0, :, 0, 0])
+    channel_2 = fft(chunk[0, :, 1, 0])
+    chunk_freq = np.abs(np.stack((channel_1[:num_inputs], channel_2[:num_inputs]), axis=1))
+    chunk_freq = chunk_freq.reshape([1, num_inputs, num_channels, 1])
 
-# Get appropriate time labels
-k = np.arange(num_inputs)
-T = samp_rate_s / len(k)
-freq_label = k * T
+    if(show):
+        # Get appropriate time labels
+        k = np.arange(num_inputs)
+        T = samp_rate_s / len(k)
+        freq_label = k * T
 
-# Look at FFT
-plt.plot(freq_label, chunk_freq[0, :, 0, 0])
-plt.plot(freq_label,chunk_freq[0, :, 1, 0])
-plt.show()
+        # Look at FFT
+        plt.plot(freq_label, chunk_freq[0, :, 0, 0])
+        plt.plot(freq_label,chunk_freq[0, :, 1, 0])
+        plt.show()
 
-# Pass to the network
+    return chunk_freq
+
+n_epochs = 10
 
 with tf.Session() as sess:
     init.run()
 
-    X_chunk = chunk_freq
-    y_chunk = np.array([1])
+    X_chunk = get_freqs(chunk)
+    y_chunk = np.array([0])
     acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
 
     print(acc)
-    # for epoch in range(n_epochs):
-    #     for iteration in range(mnist.train.num_examples // batch_size):
-    #         X_batch, y_batch = mnist.train.next_batch(batch_size)
-    #         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
-    #     acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
-    #     acc_test = accuracy.eval(feed_dict={X: mnist.test.images, y: mnist.test.labels})
-    #     print(epoch, "Train accuracy:", acc_train, "Test accuracy:", acc_test)
 
-    #     save_path = saver.save(sess, "./my_mnist_model")
+    for epoch in range(n_epochs):
+        X_batch = X_chunk
+        y_batch = y_chunk
+        sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+        acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
+        acc_test = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
+        print(epoch, "Train accuracy:", acc_train, "Test accuracy:", acc_test)
+
+        #save_path = saver.save(sess, "./my_mnist_model")
