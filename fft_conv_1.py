@@ -26,9 +26,9 @@ conv1_fmaps = 32
 # Size of each kernel
 conv1_ksize = [int(samp_rate_ms * 20), num_channels]
 # Move convolutive map 10 ms at a time
-timeStride = int(samp_rate_ms * 10)
-channelStride = 1
-conv1_stride = [timeStride, channelStride]
+conv1_time_stride = int(samp_rate_ms * 10)
+conv1_channel_stride = 1
+conv1_stride = [conv1_time_stride, conv1_channel_stride]
 conv1_pad = "SAME"
 
 with tf.name_scope("conv1"):
@@ -36,8 +36,9 @@ with tf.name_scope("conv1"):
                             strides=conv1_stride, padding=conv1_pad,
                             activation=tf.nn.relu, name="conv1")
     # conv1 shape is
-    # [-1, num_inputs / timeStride, num_channels / channelStride, conv1_fmaps]
-    conv1_flat = tf.reshape(conv1, shape=[-1, conv1_fmaps * (num_inputs // timeStride) * (num_channels // channelStride)])
+    # [-1, num_inputs / conv1_time_stride, num_channels / conv1_channel_stride, conv1_fmaps]
+    conv1_flat = tf.reshape(conv1, shape=[-1, conv1_fmaps * (num_inputs // conv1_time_stride) * (num_channels // conv1_channel_stride)])
+    
 
 # Number of nodes in fully connected layer
 n_fc1 = 10
