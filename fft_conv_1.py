@@ -178,11 +178,13 @@ with tf.Session() as sess:
     # Prints the structure of the network one layer at a time
     debug()
 
-    data = Chunks(('HS_D36', 'HS_D37'), chunk_size_ms)
+    train_data = Chunks(['HS_D36', 'HS_D37'], chunk_size_ms)
+
+    test_data = Chunks(['HS_D35'], chunk_size_ms)
 
     print('TESTING THE NET')
     for i in range(5):
-        X_batch, y_batch = data.get_batch(batch_size)
+        X_batch, y_batch = train_data.get_rand_batch(batch_size)
         X_batch = get_freqs(X_batch)
         ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
         batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
@@ -191,20 +193,23 @@ with tf.Session() as sess:
     for epoch in range(num_epochs):
         for i in range(batch_size):
             step = epoch * batch_size + i
-            X_batch, y_batch = data.get_batch(batch_size)
+            X_batch, y_batch = train_data.get_rand_batch(batch_size)
             X_batch = get_freqs(X_batch)
             if i % 10 == 0:
                 summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
                 file_write.add_summary(summary_str,step)
-
-        sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+            sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
         acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        acc_test = mse.eval(feed_dict={X: X_batch, y: y_batch})
+
+        X_test, y_test = test_data.get_rand_batch(batch_size)
+        X_test = get_freqs(X_test)
+
+        acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
 
     print('TESTING THE NET (POST TRAIN)')
     for i in range(2):
-        X_batch, y_batch = data.get_batch(batch_size)
+        X_batch, y_batch = train_data.get_rand_batch(batch_size)
         X_batch = get_freqs(X_batch)
         ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
         batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})

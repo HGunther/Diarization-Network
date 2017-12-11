@@ -32,17 +32,13 @@ class Chunks:
     def get_speaker(self, file_list, ext):
         return list(self.read_annot(f, ext) for f in file_list)
 
-    def get_chunk(self):
-        file_index = rand.randint(0, len(self._audio)-1)
-
+    def get_chunk(self, file_index, chunk_index):
         audio_file = self._audio[file_index]
         spk1 = self._spk1[file_index]
         spk2 = self._spk2[file_index]
 
         num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
         num_chunks_in_file = ceil(audio_file.shape[0] / num_samps_in_chunk)
-
-        chunk_index = rand.randint(0, num_chunks_in_file-1)
 
         start = chunk_index * num_samps_in_chunk
         end = start + num_samps_in_chunk
@@ -55,18 +51,39 @@ class Chunks:
         midpoint_samp = (start+end)//2
         midpoint_sec = midpoint_samp / self._samp_rate
 
-        spk1_status = int(spk1[np.digitize(midpoint_sec, spk1[:,0]), 1])
-        spk2_status = int(spk2[np.digitize(midpoint_sec, spk2[:,0]), 1])
+        spk1_bin = np.digitize(midpoint_sec, spk1[:,0])
+        spk2_bin = np.digitize(midpoint_sec, spk2[:,0])
+
+        # If the midpoint of the chunk is part of the padded section,
+        # There is no speaking here
+        if spk1_bin >= spk1.shape[0]:
+            spk1_status = 0
+        else:
+            spk1_status = int(spk1[spk1_bin, 1])
+
+        if spk2_bin >- spk2.shape[0]:
+            spk2_status = 0
+        else:
+            spk2_status = int(spk2[spk2_bin, 1])
 
         return chunk, [spk1_status, spk2_status]
 
-    def get_batch(self, batch_size):
+    def get_rand_chunk(self):
+        file_index = rand.randint(0, len(self._audio)-1)        
+        audio_file = self._audio[file_index]
+        num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
+        num_chunks_in_file = ceil(audio_file.shape[0] / num_samps_in_chunk)
+        chunk_index = rand.randint(0, num_chunks_in_file-1)
+
+        return self.get_chunk(file_index, chunk_index)
+
+    def get_rand_batch(self, batch_size):
         num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
 
         batch = []
         y = []
         for i in range(batch_size):
-            chunk, status = self.get_chunk()
+            chunk, status = self.get_rand_chunk()
             chunk = chunk.reshape([1, num_samps_in_chunk, 2, 1])
             batch.append(chunk)
             y.append(status)
@@ -75,14 +92,16 @@ class Chunks:
 
         return batch, y
 
-
-# TEST CODE
+# # TEST CODE
 # c = Chunks(('HS_D36', 'HS_D37'), 250)
-# chunk, status = c.get_chunk()
+# chunk, status = c.get_rand_chunk()
 # print(chunk, chunk.shape)
 
-# chunk, status = c.get_chunk()
+# chunk, status = c.get_rand_chunk()
 # print(chunk, chunk.shape)
 
-# batch, statuses = c.get_batch(5)
+# batch, statuses = c.get_rand_batch(5)
+# print(batch.shape, statuses.shape)
+
+# batch, statuses = c.get_seq_batch()
 # print(batch.shape, statuses.shape)
