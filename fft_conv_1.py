@@ -23,9 +23,9 @@ logdir = "{}/run-{}/".format(root_logdir, now)
 # Constants
 chunk_size_ms = 250
 num_channels = 2
-samp_rate_s = 44000 # Vals / s (Hz)
-samp_rate_ms = samp_rate_s // 1000 # vals / ms (kHz)
-num_samps_in_chunk = chunk_size_ms * samp_rate_ms
+samp_rate_s = 44100 # Vals / s (Hz)
+samp_rate_ms = samp_rate_s / 1000 # vals / ms (kHz)
+num_samps_in_chunk = int(chunk_size_ms * samp_rate_ms)
 num_inputs = num_samps_in_chunk // 2 # Real symmetry in Fourier Transform
 num_outputs = 2
 
@@ -40,28 +40,29 @@ with tf.name_scope("inputs"):
     X = tf.placeholder(tf.float32, shape=[None, num_inputs, num_channels, 1], name="X")
     y = tf.placeholder(tf.int32, shape=[None], name="y")
 
-# Convolutive Layers
-
-# Create convolutive maps
-# Number of convolutive maps in layer
-conv1_fmaps = 32
-# Size of each kernel
-conv1_ksize = [15, num_channels]
-conv1_time_stride = 2
-conv1_channel_stride = 1
-conv1_stride = [conv1_time_stride, conv1_channel_stride]
-conv1_pad = "SAME"
-
-# Number of convolutive maps in layer
-conv2_fmaps = 64
-# Size of each kernel
-conv2_ksize = [10, num_channels]
-conv2_time_stride = 1
-conv2_channel_stride = 1
-conv2_stride = [conv2_time_stride, conv2_channel_stride]
-conv2_pad = "SAME"
-
+# Group of convolutional layers
 with tf.name_scope("convclust1"):
+    # Convolutive Layers
+
+    # Create convolutive maps
+    # Number of convolutive maps in layer
+    conv1_fmaps = 32
+    # Size of each kernel
+    conv1_ksize = [15, num_channels]
+    conv1_time_stride = 2
+    conv1_channel_stride = 1
+    conv1_stride = [conv1_time_stride, conv1_channel_stride]
+    conv1_pad = "SAME"
+
+    # Number of convolutive maps in layer
+    conv2_fmaps = 64
+    # Size of each kernel
+    conv2_ksize = [10, num_channels]
+    conv2_time_stride = 1
+    conv2_channel_stride = 1
+    conv2_stride = [conv2_time_stride, conv2_channel_stride]
+    conv2_pad = "SAME"
+
     conv1 = tf.layers.conv2d(X, filters=conv1_fmaps, kernel_size=conv1_ksize,
                             strides=conv1_stride, padding=conv1_pad,
                             activation=tf.nn.relu, name="conv1")
@@ -76,6 +77,7 @@ with tf.name_scope("convclust1"):
     conv2_output_shape = [-1, ceil(conv1_output_shape[1] / conv2_time_stride), ceil(conv1_output_shape[2] / conv2_channel_stride), conv2_fmaps]
     assert_eq_shapes(conv2_output_shape, conv2.get_shape(), (1,2,3))
 
+# Avg Pooling layer
 with tf.name_scope("pool3"):
     pool3 = tf.nn.avg_pool(conv2, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
 
@@ -84,9 +86,10 @@ with tf.name_scope("pool3"):
 
     pool3_flat = tf.reshape(pool3, shape=[-1, conv2_fmaps * pool3_output_shape[1] * pool3_output_shape[2]])
 
-# Number of nodes in fully connected layer
-n_fc1 = 10
+# Fully connected layer
 with tf.name_scope("fc1"):
+    # Number of nodes in fully connected layer
+    n_fc1 = 10
     fc1 = tf.layers.dense(pool3_flat, n_fc1, activation=tf.nn.relu, name="fc1")
 
 # Output Layer
@@ -128,10 +131,23 @@ def get_fake_chunk(s):
 
     return chunk, np.array([s])
 
-def get_next_batch():
+# TODO
+def get_next_batch(iter, batch_size):
     # TODO
     # Get input somehow
-    pass
+    import temp
+    batch = []
+    ys = []
+    for i in range(batch_size):
+        chunk, s1 = temp.get_chunk(chunk_size_ms, iter)
+        chunk = chunk.reshape([1, num_samps_in_chunk, num_channels, 1])
+        batch.append(chunk)
+        ys.append(s1)
+    batch = np.concatenate(batch, axis=0)
+    ys = np.array(ys)
+    print(batch.shape, ys.shape)
+    return batch, ys
+    
 
 def get_freqs(batch, show=False):
     # Take FFT of each
@@ -198,8 +214,9 @@ with tf.Session() as sess:
 
     for epoch in range(num_epochs):
         for i in range(num_iterations):
-            X_batch, y_batch = get_fake_chunk(i % 2)
-            X_batch = get_freqs(X_batch)
+            # X_batch, y_batch = get_fake_chunk(i % 2)
+            X_batch, y_batch = get_next_batch(i, 5)
+            X_batch = get_freqs(X_batch, i==0 and epoch==0)
         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
         acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
         acc_test = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
