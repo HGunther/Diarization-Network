@@ -3,12 +3,12 @@ import sys
 old_tr = sys.gettrace()
 sys.settrace(None)
 
-from scipy.io import wavfile
 from scipy.fftpack import rfft, fft
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from math import ceil
+from Chunks import Chunks
 
 # For debugging
 sys.settrace(old_tr)
@@ -116,7 +116,7 @@ with tf.name_scope("init_and_save"):
     saver = tf.train.Saver()
 
 with tf.name_scope("tensorboard"):
-    mse_summary = tf.summary.scalar('PercCorrect',mse)
+    mse_summary = tf.summary.scalar('MSE',mse)
     file_write = tf.summary.FileWriter(logdir,tf.get_default_graph())
 
 def get_fake_chunk(s):
@@ -135,23 +135,6 @@ def get_fake_chunk(s):
     chunk = np.stack((chunk1, chunk2), axis=1).reshape([1, num_samps_in_chunk, num_channels, 1])
 
     return chunk, np.array([s])
-
-# TODO
-def get_next_batch(iter, batch_size):
-    # TODO
-    # Get input somehow
-    import temp
-    batch = []
-    ys = []
-    for i in range(batch_size):
-        chunk, status = temp.get_chunk(chunk_size_ms, iter * batch_size + i)
-        chunk = chunk.reshape([1, num_samps_in_chunk, num_channels, 1])
-        batch.append(chunk)
-        ys.append(status)
-    batch = np.concatenate(batch, axis=0)
-    ys = np.array(ys)
-    # print(batch.shape, ys.shape)
-    return batch, ys
     
 def get_freqs(batch, show=False):
     # Take FFT of each
@@ -187,31 +170,33 @@ def debug():
     print('logits: ',logits)
     print('Yprob: ',Y_prob)
 
-num_epochs = 10
-num_iterations = 5
+num_epochs = 20
+batch_size = 10
 
 with tf.Session() as sess:
     init.run()
     # Prints the structure of the network one layer at a time
     debug()
 
+    data = Chunks(('HS_D36', 'HS_D37'), chunk_size_ms)
+
     print('TESTING THE NET')
     for i in range(5):
-        X_batch, y_batch = get_next_batch(i, 10)
+        X_batch, y_batch = data.get_batch(batch_size)
         X_batch = get_freqs(X_batch)
         ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
         batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
         print(ev, batch_mse)
 
     for epoch in range(num_epochs):
-        for i in range(num_iterations):
-            step = epoch * num_iterations + i
-            X_batch, y_batch = get_next_batch(step, 10)
+        for i in range(batch_size):
+            step = epoch * batch_size + i
+            X_batch, y_batch = data.get_batch(batch_size)
             X_batch = get_freqs(X_batch)
             if i % 10 == 0:
                 summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
                 file_write.add_summary(summary_str,step)
-                
+
         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
         acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
         acc_test = mse.eval(feed_dict={X: X_batch, y: y_batch})
@@ -219,7 +204,7 @@ with tf.Session() as sess:
 
     print('TESTING THE NET (POST TRAIN)')
     for i in range(2):
-        X_batch, y_batch = get_next_batch(i, 10)
+        X_batch, y_batch = data.get_batch(batch_size)
         X_batch = get_freqs(X_batch)
         ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
         batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
