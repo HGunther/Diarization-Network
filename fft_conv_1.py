@@ -145,7 +145,7 @@ def get_freqs(batch, show=False):
     if(show):
         # Get appropriate time labels
         k = np.arange(num_inputs)
-        T = samp_rate_s / len(k)
+        T = samp_rate_s / (2 * len(k))
         freq_label = k * T
 
         for i in range(batch.shape[0]):
@@ -170,7 +170,7 @@ def debug(X_chunk,y_chunk):
     print('Yprob: ',Y_prob)
 
 num_epochs = 10
-num_iterations = 1
+num_iterations = 6
 
 with tf.Session() as sess:
     init.run()
@@ -178,14 +178,23 @@ with tf.Session() as sess:
     X_batch, y_batch = get_fake_chunk(0)
     X_chunk = get_freqs(X_batch, True)
     y_chunk = y_batch
+
+    # Initial check
+    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
+    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
+    print(ev, acc)
+
+    X_batch, y_batch = get_fake_chunk(1)
+    X_chunk = get_freqs(X_batch, True)
+    y_chunk = y_batch
+
+    # Initial check
+    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
+    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
+    print(ev, acc)
     
     # Prints the structure of the network one layer at a time
     debug(X_chunk,y_chunk)
-
-    # Initial check
-    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
-
-    print(acc)
 
     for epoch in range(num_epochs):
         for i in range(num_iterations):
