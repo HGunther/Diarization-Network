@@ -1,9 +1,24 @@
+# For debugging
+import sys
+old_tr = sys.gettrace()
+sys.settrace(None)
+
 from scipy.io import wavfile
 from scipy.fftpack import rfft, fft
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from math import ceil
+
+# For debugging
+sys.settrace(old_tr)
+
+# Info for TensorBoard
+from datetime import datetime
+
+now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+root_logdir = "tf_logs"
+logdir = "{}/run-{}/".format(root_logdir, now)
 
 # Constants
 chunk_size_ms = 250
@@ -30,10 +45,9 @@ with tf.name_scope("inputs"):
 # Create convolutive maps
 # Number of convolutive maps in layer
 conv1_fmaps = 32
-# Size of each kernel is 20ms
-conv1_ksize = [samp_rate_ms * 20, num_channels]
-# Move convolutive map 10 ms at a time
-conv1_time_stride = samp_rate_ms * 10
+# Size of each kernel
+conv1_ksize = [15, num_channels]
+conv1_time_stride = 2
 conv1_channel_stride = 1
 conv1_stride = [conv1_time_stride, conv1_channel_stride]
 conv1_pad = "SAME"
@@ -41,8 +55,8 @@ conv1_pad = "SAME"
 # Number of convolutive maps in layer
 conv2_fmaps = 64
 # Size of each kernel
-conv2_ksize = [15, num_channels]
-conv2_time_stride = 10
+conv2_ksize = [10, num_channels]
+conv2_time_stride = 1
 conv2_channel_stride = 1
 conv2_stride = [conv2_time_stride, conv2_channel_stride]
 conv2_pad = "SAME"
@@ -63,13 +77,12 @@ with tf.name_scope("convclust1"):
     assert_eq_shapes(conv2_output_shape, conv2.get_shape(), (1,2,3))
 
 with tf.name_scope("pool3"):
-    pool3 = tf.nn.max_pool(conv2, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
+    pool3 = tf.nn.avg_pool(conv2, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
 
     pool3_output_shape = [-1, conv2_output_shape[1] // 2, conv2_output_shape[2], conv2_fmaps]
     assert_eq_shapes(pool3_output_shape, pool3.get_shape(), (1,2,3))
 
     pool3_flat = tf.reshape(pool3, shape=[-1, conv2_fmaps * pool3_output_shape[1] * pool3_output_shape[2]])
-    
 
 # Number of nodes in fully connected layer
 n_fc1 = 10
@@ -98,24 +111,36 @@ with tf.name_scope("init_and_save"):
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
 
+def get_fake_chunk(s):
+    # this chunk is mockup input
+    from math import sin, pi
+    if s==0:
+        freq1 = 50
+        freq2 = 100
+    else:
+        freq1 = 250
+        freq2 = 400
+    # A curve with frequency freq1 Hz
+    chunk1 = np.array([sin(2 * pi * freq1 * (x / samp_rate_s)) for x in range(num_samps_in_chunk)])
+    # A curve with frequency freq2 Hz
+    chunk2 = np.array([sin(2 * pi * freq2 * (x / samp_rate_s)) for x in range(num_samps_in_chunk)])
+    chunk = np.stack((chunk1, chunk2), axis=1).reshape([1, num_samps_in_chunk, num_channels, 1])
 
+    return chunk, np.array([s])
 
-# TODO
-# Get input somehow
-# this chunk is mockup input
-from math import sin
-# A period 1/50 curve (frequency 50 Hz)
-chunk1 = np.array([sin(314.159265 * (x / samp_rate_s)) for x in range(num_samps_in_chunk)])
-# A period 1/100 curve (frequency 100 Hz)
-chunk2 = np.array([sin(628.318520 * (x / samp_rate_s)) for x in range(num_samps_in_chunk)])
-chunk = np.stack((chunk1, chunk2), axis=1).reshape([1, num_samps_in_chunk, num_channels, 1])
+def get_next_batch():
+    # TODO
+    # Get input somehow
+    pass
 
-def get_freqs(chunk, show=False):
-    # Take FFT of chunk
-    channel_1 = fft(chunk[0, :, 0, 0])
-    channel_2 = fft(chunk[0, :, 1, 0])
-    chunk_freq = np.abs(np.stack((channel_1[:num_inputs], channel_2[:num_inputs]), axis=1))
-    chunk_freq = chunk_freq.reshape([1, num_inputs, num_channels, 1])
+def get_freqs(batch, show=False):
+    # Take FFT of each
+    for i in range(batch.shape[0]):
+        batch[i, :, 0, 0] = np.abs(fft(batch[i, :, 0, 0]))
+        batch[i, :, 1, 0] = np.abs(fft(batch[i, :, 1, 0]))
+
+    # Real number symmetry of Fourier Transform
+    batch = batch[:,:num_inputs,:,:]
 
     if(show):
         # Get appropriate time labels
@@ -123,14 +148,13 @@ def get_freqs(chunk, show=False):
         T = samp_rate_s / len(k)
         freq_label = k * T
 
-        # Look at FFT
-        plt.plot(freq_label, chunk_freq[0, :, 0, 0])
-        plt.plot(freq_label,chunk_freq[0, :, 1, 0])
-        plt.show()
+        for i in range(batch.shape[0]):
+            # Look at FFT
+            plt.plot(freq_label, batch[i, :, 0, 0])
+            plt.plot(freq_label, batch[i, :, 1, 0])
+            plt.show()
 
-    return chunk_freq
-
-n_epochs = 10
+    return batch
 
 def debug(X_chunk,y_chunk):
     print('X CHUNK SHAPE: ',X_chunk.shape)
@@ -145,21 +169,28 @@ def debug(X_chunk,y_chunk):
     print('logits: ',logits)
     print('Yprob: ',Y_prob)
 
+num_epochs = 10
+num_iterations = 1
+
 with tf.Session() as sess:
     init.run()
 
-    X_chunk = get_freqs(chunk)
-    y_chunk = np.array([0])
+    X_batch, y_batch = get_fake_chunk(0)
+    X_chunk = get_freqs(X_batch, True)
+    y_chunk = y_batch
     
+    # Prints the structure of the network one layer at a time
     debug(X_chunk,y_chunk)
 
+    # Initial check
     acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
 
     print(acc)
 
-    for epoch in range(n_epochs):
-        X_batch = X_chunk
-        y_batch = y_chunk
+    for epoch in range(num_epochs):
+        for i in range(num_iterations):
+            X_batch, y_batch = get_fake_chunk(i % 2)
+            X_batch = get_freqs(X_batch)
         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
         acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
         acc_test = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
