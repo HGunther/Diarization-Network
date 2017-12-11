@@ -3,15 +3,22 @@ from scipy.fftpack import rfft, fft
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from math import ceil
 
 # Constants
-chunk_size_ms = 1000
+chunk_size_ms = 250
 num_channels = 2
 samp_rate_s = 44000 # Vals / s (Hz)
-samp_rate_ms = samp_rate_s / 1000 # vals / ms (kHz)
-num_samps_in_chunk = int(chunk_size_ms * samp_rate_ms)
-num_inputs = int(num_samps_in_chunk / 2)
+samp_rate_ms = samp_rate_s // 1000 # vals / ms (kHz)
+num_samps_in_chunk = chunk_size_ms * samp_rate_ms
+num_inputs = num_samps_in_chunk // 2 # Real symmetry in Fourier Transform
 num_outputs = 2
+
+# For sanity checks, assert that shape1==shape2 at each index in indices
+def assert_eq_shapes(shape1, shape2, indices):
+    for i in indices:
+        errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
+        assert shape1[i] == shape2[i], errmsg
 
 # Input Layer
 with tf.name_scope("inputs"):
@@ -23,27 +30,51 @@ with tf.name_scope("inputs"):
 # Create convolutive maps
 # Number of convolutive maps in layer
 conv1_fmaps = 32
-# Size of each kernel
-conv1_ksize = [int(samp_rate_ms * 20), num_channels]
+# Size of each kernel is 20ms
+conv1_ksize = [samp_rate_ms * 20, num_channels]
 # Move convolutive map 10 ms at a time
-conv1_time_stride = int(samp_rate_ms * 10)
+conv1_time_stride = samp_rate_ms * 10
 conv1_channel_stride = 1
 conv1_stride = [conv1_time_stride, conv1_channel_stride]
 conv1_pad = "SAME"
 
-with tf.name_scope("conv1"):
+# Number of convolutive maps in layer
+conv2_fmaps = 64
+# Size of each kernel
+conv2_ksize = [15, num_channels]
+conv2_time_stride = 10
+conv2_channel_stride = 1
+conv2_stride = [conv2_time_stride, conv2_channel_stride]
+conv2_pad = "SAME"
+
+with tf.name_scope("convclust1"):
     conv1 = tf.layers.conv2d(X, filters=conv1_fmaps, kernel_size=conv1_ksize,
                             strides=conv1_stride, padding=conv1_pad,
                             activation=tf.nn.relu, name="conv1")
-    # conv1 shape is
-    # [-1, num_inputs / conv1_time_stride, num_channels / conv1_channel_stride, conv1_fmaps]
-    conv1_flat = tf.reshape(conv1, shape=[-1, conv1_fmaps * (num_inputs // conv1_time_stride) * (num_channels // conv1_channel_stride)])
+
+    conv1_output_shape = [-1, ceil(num_inputs / conv1_time_stride), ceil(num_channels / conv1_channel_stride), conv1_fmaps]
+    assert_eq_shapes(conv1_output_shape, conv1.get_shape(), (1,2,3))
+
+    conv2 = tf.layers.conv2d(conv1, filters=conv2_fmaps, kernel_size=conv2_ksize,
+                            strides=conv2_stride, padding=conv2_pad,
+                            activation=tf.nn.relu, name="conv2")
+
+    conv2_output_shape = [-1, ceil(conv1_output_shape[1] / conv2_time_stride), ceil(conv1_output_shape[2] / conv2_channel_stride), conv2_fmaps]
+    assert_eq_shapes(conv2_output_shape, conv2.get_shape(), (1,2,3))
+
+with tf.name_scope("pool3"):
+    pool3 = tf.nn.max_pool(conv2, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
+
+    pool3_output_shape = [-1, conv2_output_shape[1] // 2, conv2_output_shape[2], conv2_fmaps]
+    assert_eq_shapes(pool3_output_shape, pool3.get_shape(), (1,2,3))
+
+    pool3_flat = tf.reshape(pool3, shape=[-1, conv2_fmaps * pool3_output_shape[1] * pool3_output_shape[2]])
     
 
 # Number of nodes in fully connected layer
 n_fc1 = 10
 with tf.name_scope("fc1"):
-    fc1 = tf.layers.dense(conv1_flat, n_fc1, activation=tf.nn.relu, name="fc1")
+    fc1 = tf.layers.dense(pool3_flat, n_fc1, activation=tf.nn.relu, name="fc1")
 
 # Output Layer
 with tf.name_scope("output"):
@@ -101,11 +132,27 @@ def get_freqs(chunk, show=False):
 
 n_epochs = 10
 
+def debug(X_chunk,y_chunk):
+    print('X CHUNK SHAPE: ',X_chunk.shape)
+    print('Y CHUNK SHAPE: ',y_chunk.shape)
+    print('X: ',X)
+    print('y: ',y)
+    print('conv1: ',conv1)
+    print('conv2: ',conv2)
+    print('pool3: ',pool3)
+    print('pool3flat: ',pool3_flat)
+    print('fc1: ',fc1)
+    print('logits: ',logits)
+    print('Yprob: ',Y_prob)
+
 with tf.Session() as sess:
     init.run()
 
     X_chunk = get_freqs(chunk)
     y_chunk = np.array([0])
+    
+    debug(X_chunk,y_chunk)
+
     acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
 
     print(acc)
