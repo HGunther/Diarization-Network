@@ -38,7 +38,7 @@ def assert_eq_shapes(shape1, shape2, indices):
 # Input Layer
 with tf.name_scope("inputs"):
     X = tf.placeholder(tf.float32, shape=[None, num_inputs, num_channels, 1], name="X")
-    y = tf.placeholder(tf.int32, shape=[None], name="y")
+    y = tf.placeholder(tf.int32, shape=[None, 2], name="y")
 
 # Group of convolutional layers
 with tf.name_scope("convclust1"):
@@ -95,19 +95,20 @@ with tf.name_scope("fc1"):
 # Output Layer
 with tf.name_scope("output"):
     logits = tf.layers.dense(fc1, num_outputs, name="output")
-    Y_prob = tf.nn.softmax(logits, name="Y_prob")
+    Y_prob = tf.nn.sigmoid(logits, name="Y_prob")
 
 # Training nodes
 with tf.name_scope("train"):
-    xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=y)
+    float_y = tf.cast(y, tf.float32)
+    xentropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=float_y)
     loss = tf.reduce_mean(xentropy)
     optimizer = tf.train.AdamOptimizer()
     training_op = optimizer.minimize(loss)
 
 # Evaluate the network
 with tf.name_scope("eval"):
-    correct = tf.nn.in_top_k(logits, y, 1)
-    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    error = Y_prob - float_y
+    mse = tf.reduce_mean(tf.square(error), name='mse')
 
 # Initialize the network
 with tf.name_scope("init_and_save"):
@@ -115,7 +116,7 @@ with tf.name_scope("init_and_save"):
     saver = tf.train.Saver()
 
 with tf.name_scope("tensorboard"):
-    acc_summary = tf.summary.scalar('PercCorrect',accuracy)
+    mse_summary = tf.summary.scalar('PercCorrect',mse)
     file_write = tf.summary.FileWriter(logdir,tf.get_default_graph())
 
 def get_fake_chunk(s):
@@ -143,10 +144,10 @@ def get_next_batch(iter, batch_size):
     batch = []
     ys = []
     for i in range(batch_size):
-        chunk, s1 = temp.get_chunk(chunk_size_ms, iter * batch_size + i)
+        chunk, status = temp.get_chunk(chunk_size_ms, iter * batch_size + i)
         chunk = chunk.reshape([1, num_samps_in_chunk, num_channels, 1])
         batch.append(chunk)
-        ys.append(s1)
+        ys.append(status)
     batch = np.concatenate(batch, axis=0)
     ys = np.array(ys)
     # print(batch.shape, ys.shape)
@@ -175,9 +176,7 @@ def get_freqs(batch, show=False):
 
     return batch
 
-def debug(X_chunk,y_chunk):
-    print('X CHUNK SHAPE: ',X_chunk.shape)
-    print('Y CHUNK SHAPE: ',y_chunk.shape)
+def debug():
     print('X: ',X)
     print('y: ',y)
     print('conv1: ',conv1)
@@ -189,57 +188,41 @@ def debug(X_chunk,y_chunk):
     print('Yprob: ',Y_prob)
 
 num_epochs = 10
-num_iterations = 15
+num_iterations = 5
 
 with tf.Session() as sess:
     init.run()
-
-    X_batch, y_batch = get_fake_chunk(0)
-    X_chunk = get_freqs(X_batch, True)
-    y_chunk = y_batch
-
-    # Initial check
-    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
-    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
-    print(ev, acc)
-
-    X_batch, y_batch = get_fake_chunk(1)
-    X_chunk = get_freqs(X_batch, True)
-    y_chunk = y_batch
-
-    # Initial check
-    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
-    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
-    print(ev, acc)
-    
-    X_batch, y_batch = get_fake_chunk(1)
-    X_chunk = get_freqs(X_batch, True)
-    y_chunk = y_batch
-
-    # Initial check
-    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
-    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
-    print(ev, acc)
-
     # Prints the structure of the network one layer at a time
-    debug(X_chunk,y_chunk)
+    debug()
 
     print('TESTING THE NET')
-    for i in range(num_iterations):
+    for i in range(5):
         X_batch, y_batch = get_next_batch(i, 10)
         X_batch = get_freqs(X_batch)
         ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        acc = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
-        print(ev, acc)
+        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        print(ev, batch_mse)
 
     for epoch in range(num_epochs):
         for i in range(num_iterations):
-            # X_batch, y_batch = get_fake_chunk(i % 2)
-            X_batch, y_batch = get_next_batch(i, 10)
+            step = epoch * num_iterations + i
+            X_batch, y_batch = get_next_batch(step, 10)
             X_batch = get_freqs(X_batch)
+            if i % 10 == 0:
+                summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
+                file_write.add_summary(summary_str,step)
+                
         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
-        acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
-        acc_test = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
-        print(epoch, "Train accuracy:", acc_train, "Test accuracy:", acc_test)
+        acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        acc_test = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
 
-        #save_path = saver.save(sess, "./my_mnist_model")
+    print('TESTING THE NET (POST TRAIN)')
+    for i in range(2):
+        X_batch, y_batch = get_next_batch(i, 10)
+        X_batch = get_freqs(X_batch)
+        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        print(ev, batch_mse)
+
+    #     #save_path = saver.save(sess, "./my_mnist_model")
