@@ -114,6 +114,10 @@ with tf.name_scope("init_and_save"):
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
 
+with tf.name_scope("tensorboard"):
+    acc_summary = tf.summary.scalar('PercCorrect',accuracy)
+    file_write = tf.summary.FileWriter(logdir,tf.get_default_graph())
+
 def get_fake_chunk(s):
     # this chunk is mockup input
     from math import sin, pi
@@ -139,16 +143,15 @@ def get_next_batch(iter, batch_size):
     batch = []
     ys = []
     for i in range(batch_size):
-        chunk, s1 = temp.get_chunk(chunk_size_ms, iter)
+        chunk, s1 = temp.get_chunk(chunk_size_ms, iter * batch_size + i)
         chunk = chunk.reshape([1, num_samps_in_chunk, num_channels, 1])
         batch.append(chunk)
         ys.append(s1)
     batch = np.concatenate(batch, axis=0)
     ys = np.array(ys)
-    print(batch.shape, ys.shape)
+    # print(batch.shape, ys.shape)
     return batch, ys
     
-
 def get_freqs(batch, show=False):
     # Take FFT of each
     for i in range(batch.shape[0]):
@@ -186,7 +189,7 @@ def debug(X_chunk,y_chunk):
     print('Yprob: ',Y_prob)
 
 num_epochs = 10
-num_iterations = 6
+num_iterations = 15
 
 with tf.Session() as sess:
     init.run()
@@ -209,14 +212,31 @@ with tf.Session() as sess:
     acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
     print(ev, acc)
     
+    X_batch, y_batch = get_fake_chunk(1)
+    X_chunk = get_freqs(X_batch, True)
+    y_chunk = y_batch
+
+    # Initial check
+    ev = Y_prob.eval(feed_dict={X: X_chunk, y: y_chunk})
+    acc = accuracy.eval(feed_dict={X: X_chunk, y: y_chunk})
+    print(ev, acc)
+
     # Prints the structure of the network one layer at a time
     debug(X_chunk,y_chunk)
+
+    print('TESTING THE NET')
+    for i in range(num_iterations):
+        X_batch, y_batch = get_next_batch(i, 10)
+        X_batch = get_freqs(X_batch)
+        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        acc = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
+        print(ev, acc)
 
     for epoch in range(num_epochs):
         for i in range(num_iterations):
             # X_batch, y_batch = get_fake_chunk(i % 2)
-            X_batch, y_batch = get_next_batch(i, 5)
-            X_batch = get_freqs(X_batch, i==0 and epoch==0)
+            X_batch, y_batch = get_next_batch(i, 10)
+            X_batch = get_freqs(X_batch)
         sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
         acc_train = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
         acc_test = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
