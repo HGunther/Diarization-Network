@@ -156,15 +156,15 @@ def debug():
 # Add ops to save and restore all the variables.
 saver = tf.train.Saver()
 
-num_epochs = 1000
-batch_size = 50
+num_epochs = 20
+batch_size = 10
 
 with tf.Session() as sess:
     init.run()
 
     # Restore variables from disk.
-    saver.restore(sess, "/tmp/model.ckpt")
-    print("Model restored.")
+    #saver.restore(sess, "/tmp/model.ckpt")
+    #print("Model restored.")
 
     # Prints the structure of the network one layer at a time
     debug()
@@ -173,13 +173,13 @@ with tf.Session() as sess:
 
     test_data = Chunks(['HS_D35'], chunk_size_ms)
 
-    print('\n*****Testing the net (Pre training)*****')
-    for i in range(5):
-        X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        #X_batch = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        print(ev, batch_mse)
+    # print('\n*****Testing the net (Pre training)*****')
+    # for i in range(5):
+    #     X_batch, y_batch = train_data.get_rand_batch(batch_size)
+    #     #X_batch = get_freqs(X_batch)
+    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+    #     print(ev, batch_mse)
 
     print('\n*****Training the net*****')
     for epoch in range(num_epochs):
@@ -194,25 +194,25 @@ with tf.Session() as sess:
         acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
 
         X_test, y_test = test_data.get_rand_batch(batch_size)
-        X_test = get_freqs(X_test)
+        #X_test = get_freqs(X_test)
 
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
 
-        if epoch % 5 == 0:
-            # Save the variables to disk.
-            save_path = saver.save(sess, "/tmp/model.ckpt")
-            print("Model saved in file: %s" % save_path)
+        #if epoch % 5 == 0:
+        #    # Save the variables to disk.
+        #    save_path = saver.save(sess, "/tmp/model.ckpt")
+        #    print("Model saved in file: %s" % save_path)
 
-    print('\n*****Testing the net (Post training)*****')
-    for i in range(2):
-        X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        #X_batch = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        print(ev, batch_mse)
+    # print('\n*****Testing the net (Post training)*****')
+    # for i in range(2):
+    #     X_batch, y_batch = train_data.get_rand_batch(batch_size)
+    #     #X_batch = get_freqs(X_batch)
+    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+    #     print(ev, batch_mse)
     
 
-    # Save the variables to disk.
-    save_path = saver.save(sess, "/tmp/model.ckpt")
-    print("Model saved in file: %s" % save_path)
+    ## Save the variables to disk.
+    #save_path = saver.save(sess, "/tmp/model.ckpt")
+    #print("Model saved in file: %s" % save_path)
