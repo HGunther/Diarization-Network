@@ -2,6 +2,7 @@
 import sys
 old_tr = sys.gettrace()
 sys.settrace(None)
+sys.settrace(old_tr)
 
 # To disable warning that building TF from source will make it faster.
 # For more information see:
@@ -17,15 +18,16 @@ import matplotlib.pyplot as plt
 from math import ceil
 from Chunks import Chunks
 
-# For debugging
-sys.settrace(old_tr)
-
 # Info for TensorBoard
 from datetime import datetime
-
 now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 ROOT_LOGDIR = "tf_logs"
 LOGDIR = "{}/run-{}/".format(ROOT_LOGDIR, now)
+
+# TODO Measuracy test classification accuracy
+# TODO Set learning rate/step size
+# TODO Change Kernal sizes
+# TODO Dropout learning
 
 # Constants
 CHUNCK_SIZE_MS = 250 # Milliseconds, not megaseconds
@@ -126,6 +128,9 @@ with tf.name_scope("eval"):
     error = Y_prob - float_y
     mse = tf.reduce_mean(tf.square(error), name='mse')
 
+    errors = tf.abs(y - tf.cast(tf.round(Y_prob), tf.int32))
+    misclassification_rate = tf.reduce_mean(tf.cast(errors, tf.float32), name='misclassification_rate')
+
 # Initialize the network
 with tf.name_scope("init_and_save"):
     init = tf.global_variables_initializer()
@@ -161,7 +166,7 @@ with tf.Session() as sess:
         print("Model restored.")
 
     # Prints the structure of the network one layer at a time
-    #debug()
+    debug()
 
     train_data = Chunks(['HS_D36', 'HS_D37'], CHUNCK_SIZE_MS)
 
@@ -178,9 +183,11 @@ with tf.Session() as sess:
     for epoch in range(NUM_EPOCHS):
         for i in range(EPOCH_SIZE):
             # Get data
-            step = epoch * EPOCH_SIZE + i
             X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
+
+            # Log accuracy for Tensorboard reports
             if i % 10 == 0:
+                step = epoch * EPOCH_SIZE + i
                 summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
                 file_write.add_summary(summary_str, step)
             
@@ -191,7 +198,9 @@ with tf.Session() as sess:
         acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
         X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
-        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
+        # Percent Mis-classified
+        pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
+        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
 
         # Save periodically in case of crashes and @!$#% windows updates
         if SAVE and epoch % 5 == 0:
