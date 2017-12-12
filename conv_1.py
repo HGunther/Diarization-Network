@@ -38,6 +38,12 @@ NUM_SAMPS_IN_CHUNCK = int(CHUNCK_SIZE_MS * SAMP_RATE_MS)
 NUM_INPUTS = NUM_SAMPS_IN_CHUNCK
 NUM_OUTPUTS = 2
 
+# Constants for running the training
+NUM_EPOCHS = 20
+EPOCH_SIZE = 10
+SAVE = False
+RESTORE = False
+
 # For sanity checks, assert that shape1==shape2 at each index in indices
 def assert_eq_shapes(shape1, shape2, indices):
     """Docstring"""
@@ -136,6 +142,7 @@ with tf.name_scope("init_and_save"):
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
 
+# Tensorboard stuff
 with tf.name_scope("tensorboard"):
     mse_summary = tf.summary.scalar('MSE', mse)
     file_write = tf.summary.FileWriter(LOGDIR, tf.get_default_graph())
@@ -152,10 +159,6 @@ def debug():
     print('logits: ', logits)
     print('Yprob: ', Y_prob)
 
-NUM_EPOCHS = 20
-EPOCH_SIZE = 10
-SAVE = False
-RESTORE = False
 
 with tf.Session() as sess:
     init.run()
@@ -168,9 +171,19 @@ with tf.Session() as sess:
     # Prints the structure of the network one layer at a time
     debug()
 
-    train_data = Chunks(['HS_D36', 'HS_D37'], CHUNCK_SIZE_MS)
+    # Read in data
+    import random as random
+    files = ['HS_D01', 'HS_D02', 'HS_D03', 'HS_D04', 'HS_D05', 'HS_D06', 'HS_D07', 'HS_D08', 'HS_D09']
+    files += ['HS_D' + str(i) for i in range(10, 38)]
+    del files[files.index('HS_D11')]
+    del files[files.index('HS_D22')]
+    random.shuffle(files)
 
-    test_data = Chunks(['HS_D35'], CHUNCK_SIZE_MS)
+    training_files = files[:int(0.8 * len(files))]
+    testing_files = files[int(0.8 * len(files)):]
+
+    train_data = Chunks(training_files, CHUNCK_SIZE_MS)
+    test_data = Chunks(testing_files, CHUNCK_SIZE_MS)
 
     # print('\n*****Testing the net (Pre training)*****')
     # for i in range(5):
@@ -186,7 +199,6 @@ with tf.Session() as sess:
     # Percent Mis-classified
     pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
     print('Test MSE:', acc_test, 'pmc:', pmc)
-
 
     print('\n*****Training the net*****')
     for epoch in range(NUM_EPOCHS):
