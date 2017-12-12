@@ -1,3 +1,9 @@
+from scipy.fftpack import rfft, fft
+import numpy as np
+import matplotlib.pyplot as plt
+from math import ceil
+from Chunks import Chunks # Our data handling class
+
 # For debugging
 import sys
 old_tr = sys.gettrace()
@@ -10,26 +16,17 @@ sys.settrace(old_tr)
 # https://stackoverflow.com/questions/41293077/how-to-compile-tensorflow-with-sse4-2-and-avx-instructions
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-
-from scipy.fftpack import rfft, fft
-import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
-from math import ceil
-from Chunks import Chunks
 
-# Info for TensorBoard
-from datetime import datetime
-now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-ROOT_LOGDIR = "tf_logs"
-LOGDIR = "{}/run-{}/".format(ROOT_LOGDIR, now)
-
-# TODO Measuracy test classification accuracy
-# TODO Set learning rate/step size
+# TODO Test using entire test set
 # TODO Change Kernal sizes
 # TODO Dropout learning
+# TODO Downsample
 
-# Constants
+
+# *****************************************************************************
+# CONSTANTS
+# *****************************************************************************
 CHUNCK_SIZE_MS = 250 # Milliseconds, not megaseconds
 NUM_CHANNELS = 2
 SAMP_RATE_S = 44100 # Vals / s (Hz)
@@ -39,17 +36,60 @@ NUM_INPUTS = NUM_SAMPS_IN_CHUNCK
 NUM_OUTPUTS = 2
 
 # Constants for running the training
-NUM_EPOCHS = 20
-EPOCH_SIZE = 10
+NUM_EPOCHS = 200
+EPOCH_SIZE = 20
 SAVE = False
 RESTORE = False
 
-# For sanity checks, assert that shape1==shape2 at each index in indices
+
+# *****************************************************************************
+# Functions
+# *****************************************************************************
 def assert_eq_shapes(shape1, shape2, indices):
-    """Docstring"""
+    """Sanity check. Asserts that shape1 == shape2 at each index in the indicies"""
     for i in indices:
         errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
         assert shape1[i] == shape2[i], errmsg
+
+def debug():
+    """Prints debug information"""
+    print('X: ', X)
+    print('y: ', y)
+    print('conv1: ', conv1)
+    print('conv2: ', conv2)
+    print('pool3: ', pool3)
+    print('pool3flat: ', pool3_flat)
+    print('fc1: ', fc1)
+    print('logits: ', logits)
+    print('Yprob: ', Y_prob)
+
+
+# *****************************************************************************
+# Data
+# *****************************************************************************
+import random as random
+files = ['HS_D01', 'HS_D02', 'HS_D03', 'HS_D04', 'HS_D05', 'HS_D06', 'HS_D07', 'HS_D08', 'HS_D09']
+files += ['HS_D' + str(i) for i in range(10, 38)]
+del files[files.index('HS_D11')]
+del files[files.index('HS_D22')]
+random.shuffle(files)
+
+training_files = files[:int(0.8 * len(files))]
+testing_files = files[int(0.8 * len(files)):]
+
+train_data = Chunks(training_files, CHUNCK_SIZE_MS)
+test_data = Chunks(testing_files, CHUNCK_SIZE_MS)
+
+
+# *****************************************************************************
+# Defining the net and layers
+# *****************************************************************************
+
+# Info for TensorBoard
+from datetime import datetime
+now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+ROOT_LOGDIR = "tf_logs"
+LOGDIR = "{}/run-{}/".format(ROOT_LOGDIR, now)
 
 # Input Layer
 with tf.name_scope("inputs"):
@@ -147,19 +187,10 @@ with tf.name_scope("tensorboard"):
     mse_summary = tf.summary.scalar('MSE', mse)
     file_write = tf.summary.FileWriter(LOGDIR, tf.get_default_graph())
 
-def debug():
-    """Prints debug information"""
-    print('X: ', X)
-    print('y: ', y)
-    print('conv1: ', conv1)
-    print('conv2: ', conv2)
-    print('pool3: ', pool3)
-    print('pool3flat: ', pool3_flat)
-    print('fc1: ', fc1)
-    print('logits: ', logits)
-    print('Yprob: ', Y_prob)
 
-
+# *****************************************************************************
+# Running and training the network
+# *****************************************************************************
 with tf.Session() as sess:
     init.run()
 
@@ -170,20 +201,6 @@ with tf.Session() as sess:
 
     # Prints the structure of the network one layer at a time
     debug()
-
-    # Read in data
-    import random as random
-    files = ['HS_D01', 'HS_D02', 'HS_D03', 'HS_D04', 'HS_D05', 'HS_D06', 'HS_D07', 'HS_D08', 'HS_D09']
-    files += ['HS_D' + str(i) for i in range(10, 38)]
-    del files[files.index('HS_D11')]
-    del files[files.index('HS_D22')]
-    random.shuffle(files)
-
-    training_files = files[:int(0.8 * len(files))]
-    testing_files = files[int(0.8 * len(files)):]
-
-    train_data = Chunks(training_files, CHUNCK_SIZE_MS)
-    test_data = Chunks(testing_files, CHUNCK_SIZE_MS)
 
     # print('\n*****Testing the net (Pre training)*****')
     # for i in range(5):
