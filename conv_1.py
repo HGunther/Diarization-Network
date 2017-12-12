@@ -179,6 +179,15 @@ with tf.Session() as sess:
     #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
     #     print(ev, batch_mse)
 
+    print('\n*****Pre-training accuracy*****')
+    # Measure accuracy
+    X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+    acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
+    # Percent Mis-classified
+    pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
+    print('Test MSE:', acc_test, 'pmc:', pmc)
+
+
     print('\n*****Training the net*****')
     for epoch in range(NUM_EPOCHS):
         for i in range(EPOCH_SIZE):
