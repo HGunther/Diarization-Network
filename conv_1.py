@@ -37,7 +37,7 @@ NUM_OUTPUTS = 2
 # Constants for running and training the network
 NUM_EPOCHS = 2000
 EPOCH_SIZE = 40
-SAVE = False
+SAVE = True
 RESTORE = False
 
 
@@ -149,7 +149,7 @@ with tf.name_scope("pool3"):
 # Fully connected layer
 with tf.name_scope("fc1"):
     # Number of nodes in fully connected layer
-    n_fc1 = 10
+    n_fc1 = 30
     fc1 = tf.layers.dense(pool3_flat, n_fc1, activation=tf.nn.relu, name="fc1")
 
 # Output Layer
@@ -187,72 +187,75 @@ with tf.name_scope("tensorboard"):
 # *****************************************************************************
 # Running and training the network
 # *****************************************************************************
-print("Preparing to run the network")
-with tf.Session() as sess:
-    init.run()
+# Only train and run network if this file is being run
+# Do not run when this file is imported
+if __name__ == '__main__':
+    print("Preparing to run the network")
+    with tf.Session() as sess:
+        init.run()
 
-    # Restore variables from disk.
-    if RESTORE:
-        saver.restore(sess, "/tmp/model.ckpt")
-        print("Model restored.")
+        # Restore variables from disk.
+        if RESTORE:
+            saver.restore(sess, "/tmp/model.ckpt")
+            print("Model restored.")
 
-    # Prints the structure of the network one layer at a time
-    debug()
+        # Prints the structure of the network one layer at a time
+        debug()
 
-    # print('\n*****Testing the net (Pre training)*****')
-    # for i in range(5):
-    #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-    #     print(ev, batch_mse)
+        # print('\n*****Testing the net (Pre training)*****')
+        # for i in range(5):
+        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
+        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        #     print(ev, batch_mse)
 
-    print('\n*****Pre-training accuracy*****')
-    # Measure accuracy
-    X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
-    # X_test, y_test = test_data.get_all_as_batch()
-    acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
-    # Percent Mis-classified
-    pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
-    print('Test MSE:', acc_test, 'pmc:', pmc)
-
-    print('\n*****Training the net*****')
-    for epoch in range(NUM_EPOCHS):
-        for i in range(EPOCH_SIZE):
-            # Get data
-            X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-
-            # Log accuracy for Tensorboard reports
-            if True: # i % 10 == 0:
-                step = epoch * EPOCH_SIZE + i
-                summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
-                file_write.add_summary(summary_str, step)
-            
-            # Train
-            sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
-
+        print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+        X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
         # X_test, y_test = test_data.get_all_as_batch()
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         # Percent Mis-classified
         pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
-        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+        print('Test MSE:', acc_test, 'pmc:', pmc)
 
-        # Save periodically in case of crashes and @!$#% windows updates
-        if SAVE and epoch % 5 == 0:
-           save_path = saver.save(sess, "/tmp/model.ckpt")
-           print("Model saved in file: %s" % save_path)
+        print('\n*****Training the net*****')
+        for epoch in range(NUM_EPOCHS):
+            for i in range(EPOCH_SIZE):
+                # Get data
+                X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
 
-    # print('\n*****Testing the net (Post training)*****')
-    # for i in range(2):
-    #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-    #     print(ev, batch_mse)
-    
+                # Log accuracy for Tensorboard reports
+                if True: # i % 10 == 0:
+                    step = epoch * EPOCH_SIZE + i
+                    summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
+                    file_write.add_summary(summary_str, step)
+                
+                # Train
+                sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
 
-    # Save the variables to disk
-    if SAVE:
-        save_path = saver.save(sess, "/tmp/model.ckpt")
-        print("Model saved in file: %s" % save_path)
+            # Measure accuracy
+            acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
+            # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+            # X_test, y_test = test_data.get_all_as_batch()
+            acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
+            # Percent Mis-classified
+            pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
+            print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+
+            # Save periodically in case of crashes and @!$#% windows updates
+            if SAVE and epoch % 5 == 0:
+            save_path = saver.save(sess, "/tmp/hans_model.ckpt")
+            print("Model saved in file: %s" % save_path)
+
+        # print('\n*****Testing the net (Post training)*****')
+        # for i in range(2):
+        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
+        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        #     print(ev, batch_mse)
+        
+
+        # Save the variables to disk
+        if SAVE:
+            save_path = saver.save(sess, "/tmp/model.ckpt")
+            print("Model saved in file: %s" % save_path)
