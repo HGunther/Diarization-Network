@@ -12,12 +12,13 @@ class Chunks:
         self._spk1 = self.get_speaker(file_list, '_Spk1')
         self._spk2 = self.get_speaker(file_list, '_Spk2')
         self.set_seed(seed)
+        self.num_files = len(file_list)
 
     def set_seed(self, seed):
         rand.seed(seed)
 
     def read_files(self, file_list):
-        return list(np.array(wavfile.read('Data/' + f + '.wav')[1]) for f in file_list)
+        return list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
 
     def read_annot(self, f, ext):
         spk = []
@@ -76,6 +77,32 @@ class Chunks:
         chunk_index = rand.randint(0, num_chunks_in_file-1)
 
         return self.get_chunk(file_index, chunk_index)
+
+    def get_all_as_batch(self):
+        num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
+
+        batch = []
+        y = []
+        
+        for f in range(self.num_files):
+            audio_file = self._audio[f]
+            num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
+            num_chunks_in_file = ceil(audio_file.shape[0] / num_samps_in_chunk)
+            for c in range(num_chunks_in_file):
+                chunk, status = self.get_chunk(f, c)
+                chunk = chunk.reshape([1, num_samps_in_chunk, 2, 1])
+                batch.append(chunk)
+                y.append(status)
+        batch = np.concatenate(batch, axis=0)
+        y = np.array(y)
+        
+        # for i in range(batch_size):
+        #     chunk, status = self.get_rand_chunk()
+        #     chunk = chunk.reshape([1, num_samps_in_chunk, 2, 1])
+        #     batch.append(chunk)
+        #     y.append(status)
+        
+        return batch, y
 
     def get_rand_batch(self, batch_size):
         num_samps_in_chunk = int(self._chunk_size_ms * (self._samp_rate / 1000))
