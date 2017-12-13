@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Dec 12 19:52:06 2017
-
-@author: sam
-"""
 from "tylersnn.py" import neuralnet as nn
 import numpy as np
 import csv
