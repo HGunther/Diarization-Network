@@ -17,7 +17,8 @@ def downsample_inline(infile, downrate):
     """Downsample an audio file"""
     rate, aud = wavfile.read(infile)
     daud = decimate(aud, downrate, axis=0)
-    return daudint = np.int16(daud/np.max(np.abs(daud)) * 32767)
+    return np.int16(daud/np.max(np.abs(daud)) * 32767)
+    
 # def get_fake_chunk(s):
 #     # this chunk is mockup input
 #     from math import sin, pi
