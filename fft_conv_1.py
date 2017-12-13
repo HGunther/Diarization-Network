@@ -37,7 +37,7 @@ def assert_eq_shapes(shape1, shape2, indices):
 
 # Input Layer
 with tf.name_scope("inputs"):
-    X = tf.placeholder(tf.float32, shape=[None, num_inputs, num_channels, 1], name="X")
+    X_freq = tf.placeholder(tf.float32, shape=[None, num_inputs, num_channels, 1], name="X_freq")
     y = tf.placeholder(tf.int32, shape=[None, 2], name="y")
 
 # Group of convolutional layers
@@ -63,7 +63,7 @@ with tf.name_scope("convclust1"):
     conv2_stride = [conv2_time_stride, conv2_channel_stride]
     conv2_pad = "SAME"
 
-    conv1 = tf.layers.conv2d(X, filters=conv1_fmaps, kernel_size=conv1_ksize,
+    conv1 = tf.layers.conv2d(X_freq, filters=conv1_fmaps, kernel_size=conv1_ksize,
                             strides=conv1_stride, padding=conv1_pad,
                             activation=tf.nn.relu, name="conv1")
 
@@ -160,7 +160,7 @@ def get_freqs(batch, show=False):
     return batch
 
 def debug():
-    print('X: ',X)
+    print('X_freq: ',X_freq)
     print('y: ',y)
     print('conv1: ',conv1)
     print('conv2: ',conv2)
@@ -185,34 +185,34 @@ with tf.Session() as sess:
     print('TESTING THE NET')
     for i in range(5):
         X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        X_batch = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        X_batch_freq = get_freqs(X_batch)
+        ev = Y_prob.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
+        batch_mse = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
         print(ev, batch_mse)
 
     for epoch in range(num_epochs):
         for i in range(batch_size):
             step = epoch * batch_size + i
             X_batch, y_batch = train_data.get_rand_batch(batch_size)
-            X_batch = get_freqs(X_batch)
+            X_batch_freq = get_freqs(X_batch)
             if i % 10 == 0:
-                summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
+                summary_str = mse_summary.eval(feed_dict={X_freq:X_batch_freq,y:y_batch})
                 file_write.add_summary(summary_str,step)
-            sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
-        acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
+            sess.run(training_op, feed_dict={X_freq: X_batch_freq, y: y_batch})
+        acc_train = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
 
         X_test, y_test = test_data.get_rand_batch(batch_size)
-        X_test = get_freqs(X_test)
+        X_test_freq = get_freqs(X_test)
 
-        acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
+        acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
         print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
 
     print('TESTING THE NET (POST TRAIN)')
     for i in range(2):
         X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        X_batch = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        X_batch_freq = get_freqs(X_batch)
+        ev = Y_prob.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
+        batch_mse = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
         print(ev, batch_mse)
 
     #     #save_path = saver.save(sess, "./my_mnist_model")
