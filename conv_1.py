@@ -36,9 +36,9 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 40
+EPOCH_SIZE = 50
 SAVE = True
-RESTORE = False
+RESTORE = True
 
 
 # *****************************************************************************
@@ -196,11 +196,11 @@ if __name__ == '__main__':
 
         # Restore variables from disk.
         if RESTORE:
-            saver.restore(sess, "/tmp/model.ckpt")
+            saver.restore(sess, "/tmp/hans_model.ckpt")
             print("Model restored.")
 
         # Prints the structure of the network one layer at a time
-        debug()
+        # debug()
 
         # print('\n*****Testing the net (Pre training)*****')
         # for i in range(5):
@@ -211,7 +211,7 @@ if __name__ == '__main__':
 
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
+        X_test, y_test = test_data.get_rand_batch(11 * 60 * 4 * 2)
         # X_test, y_test = test_data.get_all_as_batch()
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         # Percent Mis-classified
@@ -244,8 +244,8 @@ if __name__ == '__main__':
 
             # Save periodically in case of crashes and @!$#% windows updates
             if SAVE and epoch % 5 == 0:
-            save_path = saver.save(sess, "/tmp/hans_model.ckpt")
-            print("Model saved in file: %s" % save_path)
+                save_path = saver.save(sess, "/tmp/hans_model.ckpt")
+                print("Model saved in file: %s" % save_path)
 
         # print('\n*****Testing the net (Post training)*****')
         # for i in range(2):
@@ -257,5 +257,5 @@ if __name__ == '__main__':
 
         # Save the variables to disk
         if SAVE:
-            save_path = saver.save(sess, "/tmp/model.ckpt")
+            save_path = saver.save(sess, "/tmp/hans_model.ckpt")
             print("Model saved in file: %s" % save_path)
