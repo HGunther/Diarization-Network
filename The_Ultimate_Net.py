@@ -279,12 +279,14 @@ if __name__ == '__main__':
         #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
         #     print(ev, batch_mse)
 
+        
+
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 0.25))
+        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 2))
         # X_test, y_test = test_data.get_all_as_batch()
         X_test_freq = get_freqs(X_test)
-        acc_test, pmc, results = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+        acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
         # Percent Mis-classified
         print('Test MSE:', acc_test, 'pmc:', pmc)
         
@@ -332,3 +334,5 @@ if __name__ == '__main__':
         if SAVE:
             save_path = saver.save(sess, "tmp/ultimate_model_supertraining.ckpt")
             print("Model saved in file: %s" % save_path)
+        
+        file_write.close()
