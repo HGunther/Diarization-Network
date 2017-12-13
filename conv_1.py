@@ -28,15 +28,12 @@ sys.settrace(old_tr)
 # *****************************************************************************
 # CONSTANTS
 # *****************************************************************************
-CHUNCK_SIZE_MS = 250 # Milliseconds, not megaseconds
-NUM_CHANNELS = 2
-SAMP_RATE_S = 44100//4 # Vals / s (Hz)
-SAMP_RATE_MS = SAMP_RATE_S / 1000 # vals / ms (kHz)
-NUM_SAMPS_IN_CHUNCK = int(CHUNCK_SIZE_MS * SAMP_RATE_MS)
+from Constants import *
+# Constants that describe the network
 NUM_INPUTS = NUM_SAMPS_IN_CHUNCK
 NUM_OUTPUTS = 2
 
-# Constants for running the training
+# Constants for running and training the network
 NUM_EPOCHS = 2000
 EPOCH_SIZE = 40
 SAVE = False
