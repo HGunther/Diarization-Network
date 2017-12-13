@@ -1,0 +1,2 @@
+model_checkpoint_path: "ultimate_model_supertraining.ckpt"
+all_model_checkpoint_paths: "ultimate_model_supertraining.ckpt"
