@@ -4,8 +4,10 @@ from scipy.io import wavfile
 from scipy.signal import decimate
 import numpy as np
 
+
 def downsample(infile, outfile, downrate):
-    rate, aud = wavfile.read(filename)
+    """Downsample an audio file"""
+    rate, aud = wavfile.read(infile)
     daud = decimate(aud, downrate, axis=0)
     daudint = np.int16(daud/np.max(np.abs(daud)) * 32767)
     wavfile.write(outfile, rate // downrate, daudint)
@@ -28,6 +30,7 @@ def downsample(infile, outfile, downrate):
 #     return chunk, np.array([s])
     
 def get_freqs(batch, show=False):
+    """FFT"""
     # Take FFT of each
     for i in range(batch.shape[0]):
         batch[i, :, 0, 0] = np.abs(fft(batch[i, :, 0, 0]))
@@ -36,17 +39,5 @@ def get_freqs(batch, show=False):
     # Real number symmetry of Fourier Transform
     half_length = batch.shape[1] // 2
     batch = batch[:,:half_length,:,:]
-
-    if(show):
-        # Get appropriate time labels
-        k = np.arange(half_length)
-        T = samp_rate_s / (2 * len(k))
-        freq_label = k * T
-
-        for i in range(batch.shape[0]):
-            # Look at FFT
-            plt.plot(freq_label, batch[i, :, 0, 0])
-            plt.plot(freq_label, batch[i, :, 1, 0])
-            plt.show()
 
     return batch
