@@ -48,6 +48,13 @@ def get_freqs(batch, show=False):
 
     return batch
     
+def assert_eq_shapes(shape1, shape2, indices):
+    """Sanity check. Asserts that shape1 == shape2 at each index in the indicies"""
+    for i in indices:
+        errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
+        assert shape1[i] == shape2[i], errmsg
+
+    
 ####
 # HELPER FUNCTIONS AND CLASSES FOR FRAMEWORK.PY
 ####
