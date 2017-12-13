@@ -13,10 +13,10 @@ def downsample(infile, outfile, downrate):
     wavfile.write(outfile, rate // downrate, daudint)
 
 
-def downsample_inline(infile, downrate):
+def downsample_inline(infile, downrate_factor):
     """Downsample an audio file"""
     rate, aud = wavfile.read(infile)
-    daud = decimate(aud, downrate, axis=0)
+    daud = decimate(aud, int(downrate_factor), axis=0)
     return np.int16(daud/np.max(np.abs(daud)) * 32767)
     
 # def get_fake_chunk(s):
@@ -69,7 +69,7 @@ def format_csv_line_as_list(start_time_in_ms, end_time_in_ms, is_speaking, speak
 
 
 class Smoother:
-    def __init__(self, smoothness=10):
+    def __init__(self, smoothness=5):
         self.smoothness = smoothness
         self.data = []
         

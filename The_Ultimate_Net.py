@@ -20,8 +20,6 @@ import tensorflow as tf
 
 sys.settrace(old_tr)
 
-# Things that probably went wrong:
-# Concat needs correct axis
 
 # *****************************************************************************
 # CONSTANTS
@@ -34,44 +32,10 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 40
-SAVE = True
+EPOCH_SIZE = 10
+BATCH_SIZE = 200
+SAVE = False
 RESTORE = True
-
-
-# *****************************************************************************
-# Functions
-# *****************************************************************************
-
-def debug():
-    """Prints debug information"""
-    print('X: ', X)
-    print('y: ', y)
-    print('conv1_raw: ', conv1_raw)
-    print('conv2_raw: ', conv2_raw)
-    print('pool3_raw: ', pool3_raw)
-    print('pool3_rawflat: ', pool3_raw_flat)
-    print('fc_raw: ', fc_raw)
-    print('logits: ', logits)
-    print('Yprob: ', Y_prob)
-
-
-# *****************************************************************************
-# Data
-# *****************************************************************************
-import random as random
-files = ['HS_D{0:0=2d}'.format(i) for i in range(1, 38)]
-del files[files.index('HS_D11')]
-del files[files.index('HS_D22')]
-random.shuffle(files)
-
-training_files = files[:int(0.8 * len(files))]
-testing_files = files[int(0.8 * len(files)):]
-
-print("Reading in training data")
-train_data = Chunks(training_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
-print("Reading in test data")
-test_data = Chunks(testing_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
 
 
 # *****************************************************************************
@@ -241,76 +205,130 @@ with tf.name_scope("tensorboard"):
 
 
 # *****************************************************************************
-# Running and training the network
+# Functions
 # *****************************************************************************
-print("Preparing to run the network")
-with tf.Session() as sess:
-    init.run()
 
-    # Restore variables from disk.
-    if RESTORE:
-        saver.restore(sess, "/tmp/ultimate_model.ckpt")
+def debug():
+    """Prints debug information"""
+    print('X: ', X)
+    print('y: ', y)
+    print('conv1_raw: ', conv1_raw)
+    print('conv2_raw: ', conv2_raw)
+    print('pool3_raw: ', pool3_raw)
+    print('pool3_rawflat: ', pool3_raw_flat)
+    print('fc_raw: ', fc_raw)
+    print('logits: ', logits)
+    print('Yprob: ', Y_prob)
+
+
+def evaluate(chunk_batch):
+    print("Preparing to run the network")
+    with tf.Session() as sess:
+        init.run()
+
+        # Restore variables from disk.
+        saver.restore(sess, "tmp/ultimate_model_supertraining.ckpt")
         print("Model restored.")
 
-    # Prints the structure of the network one layer at a time
-    # debug()
+        # Get data
+        X_test = chunk_batch
+        X_test_freq = get_freqs(X_test)
+        
+        print('\nComputing...')
+        return Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
-    # print('\n*****Testing the net (Pre training)*****')
-    # for i in range(5):
-    #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-    #     print(ev, batch_mse)
 
-    print('\n*****Pre-training accuracy*****')
-    # Measure accuracy
-    X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4))
-    X_test_freq = get_freqs(X_test)
-    # X_test, y_test = test_data.get_all_as_batch()
-    acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-    # Percent Mis-classified
-    pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-    print('Test MSE:', acc_test, 'pmc:', pmc)
+# These parts only need to be run if you want to run and train the network
+if __name__ == '__main__':
+    # *****************************************************************************
+    # Data
+    # *****************************************************************************
+    import random as random
+    files = ['HS_D{0:0=2d}'.format(i) for i in range(1, 38)]
+    del files[files.index('HS_D11')]
+    del files[files.index('HS_D22')]
+    random.shuffle(files)
 
-    print('\n*****Training the net*****')
-    for epoch in range(NUM_EPOCHS):
-        for i in range(EPOCH_SIZE):
-            # Get data
-            X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-            X_batch_freq = get_freqs(X_batch)
+    training_files = files[:1]#[:int(0.8 * len(files))]
+    testing_files = files[1:2]#[int(0.8 * len(files)):]
 
-            # Log accuracy for Tensorboard reports
-            if True: # i % 10 == 0:
-                step = epoch * EPOCH_SIZE + i
-                summary_str = mse_summary.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-                file_write.add_summary(summary_str, step)
-            
-            # Train
-            sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+    print("Reading in training data")
+    train_data = Chunks(training_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
+    print("Reading in test data")
+    test_data = Chunks(testing_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
 
+    # *****************************************************************************
+    # Running and training the network
+    # *****************************************************************************
+    print("Preparing to run the network")
+    with tf.Session() as sess:
+        init.run()
+
+        # Restore variables from disk.
+        if RESTORE:
+            saver.restore(sess, "tmp/ultimate_model_supertraining.ckpt")
+            print("Model restored.")
+
+        # Prints the structure of the network one layer at a time
+        # debug()
+
+        # print('\n*****Testing the net (Pre training)*****')
+        # for i in range(5):
+        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
+        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        #     print(ev, batch_mse)
+
+        print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        acc_train = mse.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-        # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 0.25))
         # X_test, y_test = test_data.get_all_as_batch()
-        acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+        X_test_freq = get_freqs(X_test)
+        acc_test, pmc, results = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
         # Percent Mis-classified
-        pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+        print('Test MSE:', acc_test, 'pmc:', pmc)
+        
+        # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
-        # Save periodically in case of crashes and @!$#% windows updates
-        if SAVE and epoch % 5 == 0:
-            save_path = saver.save(sess, "/tmp/ultimate_model.ckpt")
+        print('\n*****Training the net*****')
+        for epoch in range(NUM_EPOCHS):
+            for i in range(EPOCH_SIZE):
+                # Get data
+                X_batch, y_batch = train_data.get_rand_batch(BATCH_SIZE)
+                X_batch_freq = get_freqs(X_batch)
+
+                # Log accuracy for Tensorboard reports
+                if True: # i % 10 == 0:
+                    step = epoch * EPOCH_SIZE + i
+                    summary_str = mse_summary.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+                    file_write.add_summary(summary_str, step)
+                
+                # Train
+                sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+
+            # Measure accuracy
+            acc_train = mse.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+            # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+            # X_test, y_test = test_data.get_all_as_batch()
+            acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            # Percent Mis-classified
+            pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+
+            # Save periodically in case of crashes and @!$#% windows updates
+            if SAVE and epoch % 2 == 0:
+                save_path = saver.save(sess, "tmp/ultimate_model_supertraining.ckpt")
+                print("Model saved in file: %s" % save_path)
+
+        # print('\n*****Testing the net (Post training)*****')
+        # for i in range(2):
+        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
+        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
+        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
+        #     print(ev, batch_mse)
+        
+
+        # Save the variables to disk
+        if SAVE:
+            save_path = saver.save(sess, "tmp/ultimate_model_supertraining.ckpt")
             print("Model saved in file: %s" % save_path)
-
-    # print('\n*****Testing the net (Post training)*****')
-    # for i in range(2):
-    #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-    #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-    #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-    #     print(ev, batch_mse)
-    
-
-    # Save the variables to disk
-    if SAVE:
-        save_path = saver.save(sess, "/tmp/ultimate_model.ckpt")
-        print("Model saved in file: %s" % save_path)
