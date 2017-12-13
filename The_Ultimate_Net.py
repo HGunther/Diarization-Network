@@ -249,8 +249,8 @@ if __name__ == '__main__':
     del files[files.index('HS_D22')]
     random.shuffle(files)
 
-    training_files = files[:1]#[:int(0.8 * len(files))]
-    testing_files = files[1:2]#[int(0.8 * len(files)):]
+    training_files = files[:int(0.8 * len(files))]
+    testing_files = files[int(0.8 * len(files)):]
 
     print("Reading in training data")
     train_data = Chunks(training_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
