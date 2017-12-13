@@ -30,15 +30,15 @@ sys.settrace(old_tr)
 # *****************************************************************************
 CHUNCK_SIZE_MS = 250 # Milliseconds, not megaseconds
 NUM_CHANNELS = 2
-SAMP_RATE_S = 44100 # Vals / s (Hz)
+SAMP_RATE_S = 44100//4 # Vals / s (Hz)
 SAMP_RATE_MS = SAMP_RATE_S / 1000 # vals / ms (kHz)
 NUM_SAMPS_IN_CHUNCK = int(CHUNCK_SIZE_MS * SAMP_RATE_MS)
 NUM_INPUTS = NUM_SAMPS_IN_CHUNCK
 NUM_OUTPUTS = 2
 
 # Constants for running the training
-NUM_EPOCHS = 200
-EPOCH_SIZE = 20
+NUM_EPOCHS = 2000
+EPOCH_SIZE = 40
 SAVE = False
 RESTORE = False
 
@@ -69,8 +69,7 @@ def debug():
 # Data
 # *****************************************************************************
 import random as random
-files = ['HS_D01', 'HS_D02', 'HS_D03', 'HS_D04', 'HS_D05', 'HS_D06', 'HS_D07', 'HS_D08', 'HS_D09']
-files += ['HS_D' + str(i) for i in range(10, 38)]
+files = ['HS_D{0:0=2d}'.format(i) for i in range(1, 38)]
 del files[files.index('HS_D11')]
 del files[files.index('HS_D22')]
 random.shuffle(files)
@@ -78,18 +77,16 @@ random.shuffle(files)
 training_files = files[:int(0.8 * len(files))]
 testing_files = files[int(0.8 * len(files)):]
 
-training_files = training_files[:2]
-testing_files = testing_files[:1]
-
 print("Reading in training data")
-train_data = Chunks(training_files, CHUNCK_SIZE_MS)
+train_data = Chunks(training_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
 print("Reading in test data")
-test_data = Chunks(testing_files, CHUNCK_SIZE_MS)
+test_data = Chunks(testing_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
 
 
 # *****************************************************************************
 # Defining the net and layers
 # *****************************************************************************
+print("Defining layers in tensorflow")
 
 # Info for TensorBoard
 from datetime import datetime
@@ -110,8 +107,8 @@ with tf.name_scope("convclust1"):
     # Number of convolutive maps in layer
     conv1_fmaps = 32
     # Size of each kernel
-    conv1_ksize = [(20 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK, NUM_CHANNELS]
-    conv1_time_stride = (10 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK
+    conv1_ksize = [int((20 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK), NUM_CHANNELS]
+    conv1_time_stride = int((10 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK)
     conv1_channel_stride = 1
     conv1_stride = [conv1_time_stride, conv1_channel_stride]
     conv1_pad = "SAME"
@@ -197,6 +194,7 @@ with tf.name_scope("tensorboard"):
 # *****************************************************************************
 # Running and training the network
 # *****************************************************************************
+print("Preparing to run the network")
 with tf.Session() as sess:
     init.run()
 
@@ -217,7 +215,7 @@ with tf.Session() as sess:
 
     print('\n*****Pre-training accuracy*****')
     # Measure accuracy
-    X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+    X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
     # X_test, y_test = test_data.get_all_as_batch()
     acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
     # Percent Mis-classified
@@ -231,7 +229,7 @@ with tf.Session() as sess:
             X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
 
             # Log accuracy for Tensorboard reports
-            if i % 10 == 0:
+            if True: # i % 10 == 0:
                 step = epoch * EPOCH_SIZE + i
                 summary_str = mse_summary.eval(feed_dict={X:X_batch,y:y_batch})
                 file_write.add_summary(summary_str, step)
@@ -241,7 +239,8 @@ with tf.Session() as sess:
 
         # Measure accuracy
         acc_train = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+        # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+        # X_test, y_test = test_data.get_all_as_batch()
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         # Percent Mis-classified
         pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
