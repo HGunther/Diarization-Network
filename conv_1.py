@@ -8,7 +8,6 @@ from Chunks import Chunks # Our data handling class
 import sys
 old_tr = sys.gettrace()
 sys.settrace(None)
-sys.settrace(old_tr)
 
 # To disable warning that building TF from source will make it faster.
 # For more information see:
@@ -17,6 +16,8 @@ sys.settrace(old_tr)
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import tensorflow as tf
+
+sys.settrace(old_tr)
 
 # TODO Test using entire test set
 # TODO Change Kernal sizes
@@ -77,7 +78,12 @@ random.shuffle(files)
 training_files = files[:int(0.8 * len(files))]
 testing_files = files[int(0.8 * len(files)):]
 
+training_files = training_files[:2]
+testing_files = testing_files[:1]
+
+print("Reading in training data")
 train_data = Chunks(training_files, CHUNCK_SIZE_MS)
+print("Reading in test data")
 test_data = Chunks(testing_files, CHUNCK_SIZE_MS)
 
 
@@ -104,8 +110,8 @@ with tf.name_scope("convclust1"):
     # Number of convolutive maps in layer
     conv1_fmaps = 32
     # Size of each kernel
-    conv1_ksize = [15, NUM_CHANNELS]
-    conv1_time_stride = 2
+    conv1_ksize = [(20 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK, NUM_CHANNELS]
+    conv1_time_stride = (10 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK
     conv1_channel_stride = 1
     conv1_stride = [conv1_time_stride, conv1_channel_stride]
     conv1_pad = "SAME"
@@ -212,6 +218,7 @@ with tf.Session() as sess:
     print('\n*****Pre-training accuracy*****')
     # Measure accuracy
     X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
+    # X_test, y_test = test_data.get_all_as_batch()
     acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
     # Percent Mis-classified
     pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
