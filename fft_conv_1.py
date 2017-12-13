@@ -31,7 +31,7 @@ NUM_OUTPUTS = 2
 
 # Constants for running the training
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 40
+EPOCH_SIZE = 10
 SAVE = False
 RESTORE = False
 
@@ -235,7 +235,7 @@ with tf.Session() as sess:
 
     print('\n****Pre-training accuracy*****')
     # Measure accuracy
-    X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
+    X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4))
     X_test_freq = get_freqs(X_test)
     
     acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
@@ -255,7 +255,7 @@ with tf.Session() as sess:
             if True:
                 step = epoch * EPOCH_SIZE + i
                 summary_str = mse_summary.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-                file_write.add_sumary(summary_str, step)
+                file_write.add_summary(summary_str, step)
 
             # Train
             sess.run(training_op, feed_dict={X_freq: X_batch_freq, y: y_batch})
@@ -263,7 +263,7 @@ with tf.Session() as sess:
         # Measure accuracy
         acc_train = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
         acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
-        pmc = misclassification_rate.eval(feed_dict={_freq: X_test_freq, y: y_test})
+        pmc = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
         print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
 
         # Save periodically
