@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import ceil
 from Chunks import Chunks # Our data handling class
+from utils import assert_eq_shapes
 
 # For debugging
 import sys
@@ -43,11 +44,6 @@ RESTORE = False
 # *****************************************************************************
 # Functions
 # *****************************************************************************
-def assert_eq_shapes(shape1, shape2, indices):
-    """Sanity check. Asserts that shape1 == shape2 at each index in the indicies"""
-    for i in indices:
-        errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
-        assert shape1[i] == shape2[i], errmsg
 
 def debug():
     """Prints debug information"""
