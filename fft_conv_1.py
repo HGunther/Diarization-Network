@@ -1,44 +1,91 @@
-# For debugging
-import sys
-old_tr = sys.gettrace()
-sys.settrace(None)
-
-from scipy.fftpack import rfft, fft
 import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
 from math import ceil
 from Chunks import Chunks
 from utils import *
 
 # For debugging
+import sys
+old_tr = sys.gettrace()
+sys.settrace(None)
+
+# To disable warning that building TF from source will make it faster.
+# For more information see:
+# https://www.tensorflow.org/install/install_sources
+# https://stackoverflow.com/questions/41293077/how-to-compile-tensorflow-with-sse4-2-and-avx-instructions
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+import tensorflow as tf
+
 sys.settrace(old_tr)
+
+# *****************************************************************************
+# CONSTANTS
+# *****************************************************************************
+CHUNK_SIZE_MS = 250 # Milliseconds, not megaseconds
+NUM_CHANNELS = 2
+SAMP_RATE_S = 44100//4 # Vals / s (Hz)
+SAMP_RATE_MS = SAMP_RATE_S / 1000 # vals / ms (kHz)
+NUM_SAMPS_IN_CHUNK = int(CHUNK_SIZE_MS * SAMP_RATE_MS)
+NUM_INPUTS = int(NUM_SAMPS_IN_CHUNK / 2)
+NUM_OUTPUTS = 2
+
+# Constants for running the training
+NUM_EPOCHS = 2000
+EPOCH_SIZE = 40
+SAVE = False
+RESTORE = False
+
+# *****************************************************************************
+# DEBUG
+# *****************************************************************************
+
+def debug():
+    """Prints debug information"""
+    print('X: ', X_freq)
+    print('y: ', y)
+    print('conv1: ', conv1)
+    print('conv2: ', conv2)
+    print('pool3: ', pool3)
+    print('conv4: ', conv4)
+    print('conv5: ', conv5)
+    print('pool6: ', pool6)
+    print('pool6flat: ', pool6_flat)
+    print('fc1: ', fc1)
+    print('fc2: ', fc2)
+    print('logits: ', logits)
+    print('Yprob: ', Y_prob)
+
+# *****************************************************************************
+# Data
+# *****************************************************************************
+import random as random
+files = ['HS_D{0:0=2d}'.format(i) for i in range(1, 38)]
+del files[files.index('HS_D11')]
+del files[files.index('HS_D22')]
+random.shuffle(files)
+
+training_files = files[:int(0.8 * len(files))]
+testing_files = files[int(0.8 * len(files)):]
+
+print("Reading in training data")
+train_data = Chunks(training_files, CHUNK_SIZE_MS, samp_rate=SAMP_RATE_S)
+print("Reading in test data")
+test_data = Chunks(testing_files, CHUNK_SIZE_MS, samp_rate=SAMP_RATE_S)
+
+# *****************************************************************************
+# Defining the net and layers
+# *****************************************************************************
+print("Defining layers in tensorflow")
 
 # Info for TensorBoard
 from datetime import datetime
-
 now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-root_logdir = "tf_logs"
-logdir = "{}/run-{}/".format(root_logdir, now)
-
-# Constants
-chunk_size_ms = 250
-num_channels = 2
-samp_rate_s = 44100 # Vals / s (Hz)
-samp_rate_ms = samp_rate_s / 1000 # vals / ms (kHz)
-num_samps_in_chunk = int(chunk_size_ms * samp_rate_ms)
-num_inputs = num_samps_in_chunk // 2 # Real symmetry in Fourier Transform
-num_outputs = 2
-
-# For sanity checks, assert that shape1==shape2 at each index in indices
-def assert_eq_shapes(shape1, shape2, indices):
-    for i in indices:
-        errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
-        assert shape1[i] == shape2[i], errmsg
+ROOT_LOGDIR = "tf_logs"
+LOGDIR = "{}/run-{}/".format(ROOT_LOGDIR, now)
 
 # Input Layer
 with tf.name_scope("inputs"):
-    X_freq = tf.placeholder(tf.float32, shape=[None, num_inputs, num_channels, 1], name="X_freq")
+    X_freq = tf.placeholder(tf.float32, shape=[None, NUM_INPUTS, NUM_CHANNELS, 1], name="X_freq")
     y = tf.placeholder(tf.int32, shape=[None, 2], name="y")
 
 # Group of convolutional layers
@@ -49,7 +96,7 @@ with tf.name_scope("convclust1"):
     # Number of convolutive maps in layer
     conv1_fmaps = 32
     # Size of each kernel
-    conv1_ksize = [15, num_channels]
+    conv1_ksize = [15, NUM_CHANNELS]
     conv1_time_stride = 2
     conv1_channel_stride = 1
     conv1_stride = [conv1_time_stride, conv1_channel_stride]
@@ -58,7 +105,7 @@ with tf.name_scope("convclust1"):
     # Number of convolutive maps in layer
     conv2_fmaps = 64
     # Size of each kernel
-    conv2_ksize = [10, num_channels]
+    conv2_ksize = [10, NUM_CHANNELS]
     conv2_time_stride = 1
     conv2_channel_stride = 1
     conv2_stride = [conv2_time_stride, conv2_channel_stride]
@@ -68,7 +115,7 @@ with tf.name_scope("convclust1"):
                             strides=conv1_stride, padding=conv1_pad,
                             activation=tf.nn.relu, name="conv1")
 
-    conv1_output_shape = [-1, ceil(num_inputs / conv1_time_stride), ceil(num_channels / conv1_channel_stride), conv1_fmaps]
+    conv1_output_shape = [-1, ceil(NUM_INPUTS / conv1_time_stride), ceil(NUM_CHANNELS / conv1_channel_stride), conv1_fmaps]
     assert_eq_shapes(conv1_output_shape, conv1.get_shape(), (1,2,3))
 
     conv2 = tf.layers.conv2d(conv1, filters=conv2_fmaps, kernel_size=conv2_ksize,
@@ -93,7 +140,7 @@ with tf.name_scope("convclust2"):
     # Number of convolutive maps in layer
     conv4_fmaps = 15
     # Size of each kernel
-    conv4_ksize = [10, num_channels]
+    conv4_ksize = [10, NUM_CHANNELS]
     conv4_time_stride = 5
     conv4_channel_stride = 1
     conv4_stride = [conv4_time_stride, conv4_channel_stride]
@@ -102,7 +149,7 @@ with tf.name_scope("convclust2"):
     # Number of convolutive maps in layer
     conv5_fmaps = 20
     # Size of each kernel
-    conv5_ksize = [5, num_channels]
+    conv5_ksize = [5, NUM_CHANNELS]
     conv5_time_stride = 1
     conv5_channel_stride = 1
     conv5_stride = [conv5_time_stride, conv5_channel_stride]
@@ -132,7 +179,7 @@ with tf.name_scope("pool6"):
     pool6_flat = tf.reshape(pool6, shape=[-1, conv5_fmaps * pool6_output_shape[1] * pool6_output_shape[2]])
 
 # Fully connected layers
-with tf.name_scope("fc1"):
+with tf.name_scope("fc"):
     # Number of nodes in fully connected layer
     n_fc1 = 40
     n_fc2 = 60
@@ -141,7 +188,7 @@ with tf.name_scope("fc1"):
 
 # Output Layer
 with tf.name_scope("output"):
-    logits = tf.layers.dense(fc2, num_outputs, name="output")
+    logits = tf.layers.dense(fc2, NUM_OUTPUTS, name="output")
     Y_prob = tf.nn.sigmoid(logits, name="Y_prob")
 
 # Training nodes
@@ -157,73 +204,74 @@ with tf.name_scope("eval"):
     error = Y_prob - float_y
     mse = tf.reduce_mean(tf.square(error), name='mse')
 
+    errors = tf.abs(y - tf.cast(tf.round(Y_prob), tf.int32))
+    misclassification_rate = tf.reduce_mean(tf.cast(errors, tf.float32), name='misclassification_rate')
+
 # Initialize the network
 with tf.name_scope("init_and_save"):
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
 
+# Tensorboard stuff
 with tf.name_scope("tensorboard"):
     mse_summary = tf.summary.scalar('MSE',mse)
-    file_write = tf.summary.FileWriter(logdir,tf.get_default_graph())
+    file_write = tf.summary.FileWriter(LOGDIR,tf.get_default_graph())
 
-def debug():
-    print('X_freq: ',X_freq)
-    print('y: ',y)
-    print('conv1: ',conv1)
-    print('conv2: ',conv2)
-    print('pool3: ',pool3)
-    print('conv4: ',conv4)
-    print('conv5: ',conv5)
-    print('pool6: ',pool6)
-    print('pool6flat: ',pool6_flat)
-    print('fc1: ',fc1)
-    print('fc2: ',fc2)
-    print('logits: ',logits)
-    print('Yprob: ',Y_prob)
 
-num_epochs = 20
-batch_size = 10
-
+# *****************************************************************************
+# Running and training the network
+# *****************************************************************************
+print("Preparing to run the network")
 with tf.Session() as sess:
     init.run()
+
+    # Restore variables from disk.
+    if RESTORE:
+        saver.restore(sess, "/tmp/model.ckpt")
+        print("Model restored.")
+
     # Prints the structure of the network one layer at a time
     debug()
 
-    train_data = Chunks(['HS_D36', 'HS_D37'], chunk_size_ms)
+    print('\n****Pre-training accuracy*****')
+    # Measure accuracy
+    X_test, y_test = test_data.get_rand_batch(11 * 60 * 4)
+    X_test_freq = get_freqs(X_test)
+    
+    acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
 
-    test_data = Chunks(['HS_D35'], chunk_size_ms)
+    pmc = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
 
-    print('TESTING THE NET')
-    for i in range(5):
-        X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        X_batch_freq = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-        print(ev, batch_mse)
+    print('Test MSE:', acc_test, 'pmc:', pmc)
 
-    for epoch in range(num_epochs):
-        for i in range(batch_size):
-            step = epoch * batch_size + i
-            X_batch, y_batch = train_data.get_rand_batch(batch_size)
+    print('\n*****Training the net*****')
+    for epoch in range(NUM_EPOCHS):
+        for i in range(EPOCH_SIZE):
+            # Get data
+            X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
             X_batch_freq = get_freqs(X_batch)
-            if i % 10 == 0:
-                summary_str = mse_summary.eval(feed_dict={X_freq:X_batch_freq,y:y_batch})
-                file_write.add_summary(summary_str,step)
+
+            # Log accuracy for Tensorboard reports
+            if True:
+                step = epoch * EPOCH_SIZE + i
+                summary_str = mse_summary.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
+                file_write.add_sumary(summary_str, step)
+
+            # Train
             sess.run(training_op, feed_dict={X_freq: X_batch_freq, y: y_batch})
+
+        # Measure accuracy
         acc_train = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-
-        X_test, y_test = test_data.get_rand_batch(batch_size)
-        X_test_freq = get_freqs(X_test)
-
         acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
-        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test)
+        pmc = misclassification_rate.eval(feed_dict={_freq: X_test_freq, y: y_test})
+        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
 
-    print('TESTING THE NET (POST TRAIN)')
-    for i in range(2):
-        X_batch, y_batch = train_data.get_rand_batch(batch_size)
-        X_batch_freq = get_freqs(X_batch)
-        ev = Y_prob.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-        batch_mse = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
-        print(ev, batch_mse)
+        # Save periodically
+        if SAVE and epoch % 5 == 0:
+           save_path = saver.save(sess, "/tmp/model.ckpt")
+           print("Model saved in file: %s" % save_path)
 
-    #     #save_path = saver.save(sess, "./my_mnist_model")
+    # Save the variables to disk
+    if SAVE:
+        save_path = saver.save(sess, "/tmp/model.ckpt")
+        print("Model saved in file: %s" % save_path)
