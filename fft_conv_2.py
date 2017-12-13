@@ -31,7 +31,7 @@ NUM_OUTPUTS = 2
 
 # Constants for running the training
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 10
+EPOCH_SIZE = 40
 SAVE = False
 RESTORE = False
 
@@ -133,7 +133,7 @@ with tf.name_scope("pool3"):
 # Fully connected layers
 with tf.name_scope("fc"):
     # Number of nodes in fully connected layer
-    n_fc1 = 40
+    n_fc1 = 20
     fc1 = tf.layers.dense(pool3_flat, n_fc1, activation=tf.nn.relu, name="fc1")
 
 # Output Layer
@@ -185,7 +185,7 @@ with tf.Session() as sess:
 
     print('\n****Pre-training accuracy*****')
     # Measure accuracy
-    X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4))
+    X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 / 40))
     X_test_freq = get_freqs(X_test)
     
     acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
