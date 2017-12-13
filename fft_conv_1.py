@@ -84,17 +84,63 @@ with tf.name_scope("pool3"):
     pool3_output_shape = [-1, conv2_output_shape[1] // 2, conv2_output_shape[2], conv2_fmaps]
     assert_eq_shapes(pool3_output_shape, pool3.get_shape(), (1,2,3))
 
-    pool3_flat = tf.reshape(pool3, shape=[-1, conv2_fmaps * pool3_output_shape[1] * pool3_output_shape[2]])
+# Second convolution cluster
+with tf.name_scope("convclust2"):
+    # Convolutive Layers
 
-# Fully connected layer
+    # Create convolutive maps
+    # Number of convolutive maps in layer
+    conv4_fmaps = 15
+    # Size of each kernel
+    conv4_ksize = [10, num_channels]
+    conv4_time_stride = 5
+    conv4_channel_stride = 1
+    conv4_stride = [conv4_time_stride, conv4_channel_stride]
+    conv4_pad = "SAME"
+
+    # Number of convolutive maps in layer
+    conv5_fmaps = 20
+    # Size of each kernel
+    conv5_ksize = [5, num_channels]
+    conv5_time_stride = 1
+    conv5_channel_stride = 1
+    conv5_stride = [conv5_time_stride, conv5_channel_stride]
+    conv5_pad = "SAME"
+
+    conv4 = tf.layers.conv2d(pool3, filters=conv4_fmaps, kernel_size=conv4_ksize,
+                            strides=conv4_stride, padding=conv4_pad,
+                            activation=tf.nn.relu, name="conv4")
+
+    conv4_output_shape = [-1, ceil(pool3_output_shape[1] / conv4_time_stride), ceil(pool3_output_shape[2] / conv4_channel_stride), conv4_fmaps]
+    assert_eq_shapes(conv4_output_shape, conv4.get_shape(), (1,2,3))
+
+    conv5 = tf.layers.conv2d(conv4, filters=conv5_fmaps, kernel_size=conv5_ksize,
+                            strides=conv5_stride, padding=conv5_pad,
+                            activation=tf.nn.relu, name="conv5")
+
+    conv5_output_shape = [-1, ceil(conv4_output_shape[1] / conv5_time_stride), ceil(conv4_output_shape[2] / conv5_channel_stride), conv5_fmaps]
+    assert_eq_shapes(conv5_output_shape, conv5.get_shape(), (1,2,3))
+
+# Max Pooling layer
+with tf.name_scope("pool6"):
+    pool6 = tf.nn.max_pool(conv5, ksize=[1, 3, 1, 1], strides=[1, 3, 1, 1], padding="VALID")
+
+    pool6_output_shape = [-1, conv5_output_shape[1] // 3, conv5_output_shape[2], conv5_fmaps]
+    assert_eq_shapes(pool6_output_shape, pool6.get_shape(), (1,2,3))
+
+    pool6_flat = tf.reshape(pool6, shape=[-1, conv5_fmaps * pool6_output_shape[1] * pool6_output_shape[2]])
+
+# Fully connected layers
 with tf.name_scope("fc1"):
     # Number of nodes in fully connected layer
-    n_fc1 = 10
-    fc1 = tf.layers.dense(pool3_flat, n_fc1, activation=tf.nn.relu, name="fc1")
+    n_fc1 = 40
+    n_fc2 = 60
+    fc1 = tf.layers.dense(pool6_flat, n_fc1, activation=tf.nn.relu, name="fc1")
+    fc2 = tf.layers.dense(fc1, n_fc2, activation=tf.nn.relu, name="fc2")
 
 # Output Layer
 with tf.name_scope("output"):
-    logits = tf.layers.dense(fc1, num_outputs, name="output")
+    logits = tf.layers.dense(fc2, num_outputs, name="output")
     Y_prob = tf.nn.sigmoid(logits, name="Y_prob")
 
 # Training nodes
@@ -165,8 +211,12 @@ def debug():
     print('conv1: ',conv1)
     print('conv2: ',conv2)
     print('pool3: ',pool3)
-    print('pool3flat: ',pool3_flat)
+    print('conv4: ',conv4)
+    print('conv5: ',conv5)
+    print('pool6: ',pool6)
+    print('pool6flat: ',pool6_flat)
     print('fc1: ',fc1)
+    print('fc2: ',fc2)
     print('logits: ',logits)
     print('Yprob: ',Y_prob)
 
