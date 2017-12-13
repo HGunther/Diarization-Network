@@ -3,9 +3,10 @@ import numpy as np
 import random as rand
 from math import ceil
 import csv
+from Constants import *
 
 class Chunks:
-    def __init__(self, file_list, chunk_size_ms, seed=42, samp_rate=44100):
+    def __init__(self, file_list, chunk_size_ms, seed=42, samp_rate=ORIGINAL_SAMP_RATE_S):
         self._chunk_size_ms = chunk_size_ms
         self._samp_rate = samp_rate
         self._audio = self.read_files(file_list)
