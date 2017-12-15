@@ -63,7 +63,7 @@ class Chunks:
         else:
             spk1_status = int(spk1[spk1_bin, 1])
 
-        if spk2_bin >- spk2.shape[0]:
+        if spk2_bin >= spk2.shape[0]:
             spk2_status = 0
         else:
             spk2_status = int(spk2[spk2_bin, 1])
