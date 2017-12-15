@@ -33,9 +33,9 @@ NUM_OUTPUTS = 2
 # Constants for running and training the network
 NUM_EPOCHS = 2000
 EPOCH_SIZE = 5
-BATCH_SIZE = 10
+BATCH_SIZE = 100
 SAVE = True
-RESTORE = False
+RESTORE = True
 MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
 
 
@@ -223,13 +223,13 @@ def debug():
     print('Yprob: ', Y_prob)
 
 
-def evaluate(chunk_batch):
+def evaluate(chunk_batch, model=MODEL_LOCATION):
     print("Preparing to run the network")
     with tf.Session() as sess:
         init.run()
 
         # Restore variables from disk.
-        saver.restore(sess, MODEL_LOCATION)
+        saver.restore(sess, model)
         print("Model restored.")
 
         # Get data
@@ -285,7 +285,7 @@ if __name__ == '__main__':
 
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNCK) / 10)) 
+        X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNCK) / 1)) 
         # X_test, y_test = test_data.get_all_as_batch()
         X_test_freq = get_freqs(X_test)
         acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
