@@ -33,7 +33,7 @@ NUM_OUTPUTS = 2
 # Constants for running and training the network
 NUM_EPOCHS = 2000
 EPOCH_SIZE = 5
-BATCH_SIZE = 20
+BATCH_SIZE = 10
 SAVE = True
 RESTORE = False
 MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
@@ -202,7 +202,8 @@ with tf.name_scope("init_and_save"):
 # Tensorboard stuff
 with tf.name_scope("tensorboard"):
     mse_summary = tf.summary.scalar('MSE', mse)
-    file_write = tf.summary.FileWriter(LOGDIR, tf.get_default_graph())
+    tb_train_writer = tf.summary.FileWriter(LOGDIR + "_train", tf.get_default_graph())
+    tb_test_writer = tf.summary.FileWriter(LOGDIR + "_test", tf.get_default_graph())
 
 
 # *****************************************************************************
@@ -284,7 +285,7 @@ if __name__ == '__main__':
 
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 1))
+        X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNCK) / 10)) 
         # X_test, y_test = test_data.get_all_as_batch()
         X_test_freq = get_freqs(X_test)
         acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
@@ -310,10 +311,10 @@ if __name__ == '__main__':
                 sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
 
             # Measure accuracy
-            acc_train = mse.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+            acc_train, train_summary = sess.run([mse, mse_summary], feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
             # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
             # X_test, y_test = test_data.get_all_as_batch()
-            acc_test, pmc, result = sess.run([mse, misclassification_rate, Y_prob], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            acc_test, pmc, test_summary = sess.run([mse, misclassification_rate, mse_summary], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             #acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             # Percent Mis-classified
             #pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
@@ -323,8 +324,9 @@ if __name__ == '__main__':
             # Log accuracy for Tensorboard reports
             if True: # i % 10 == 0:
                 step = epoch #* EPOCH_SIZE + i
-                summary_str = mse_summary.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-                file_write.add_summary(summary_str, step)
+                # summary_str = mse_summary.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+                tb_test_writer.add_summary(test_summary, step)
+                tb_train_writer.add_summary(train_summary, step)
 
             # Save periodically in case of crashes and @!$#% windows updates
             if SAVE and epoch % 10 == 0:
