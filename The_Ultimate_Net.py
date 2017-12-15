@@ -32,10 +32,10 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 5
-BATCH_SIZE = 100
+EPOCH_SIZE = 1
+BATCH_SIZE = 1200
 SAVE = True
-RESTORE = True
+RESTORE = False
 MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
 
 
@@ -329,7 +329,7 @@ if __name__ == '__main__':
                 tb_train_writer.add_summary(train_summary, step)
 
             # Save periodically in case of crashes and @!$#% windows updates
-            if SAVE and epoch % 10 == 0:
+            if SAVE and epoch % 2 == 0:
                 save_path = saver.save(sess, MODEL_LOCATION)
                 print("Model saved in file: %s" % save_path)
 
