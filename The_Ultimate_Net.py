@@ -291,6 +291,8 @@ if __name__ == '__main__':
         acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
         # Percent Mis-classified
         print('Test MSE:', acc_test, 'pmc:', pmc)
+
+        best_test_mse = acc_test * 10
         
         # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
@@ -329,7 +331,8 @@ if __name__ == '__main__':
                 tb_train_writer.add_summary(train_summary, step)
 
             # Save periodically in case of crashes and @!$#% windows updates
-            if SAVE and epoch % 2 == 0:
+            if acc_test < best_test_mse: #SAVE and epoch % 2 == 0:
+                best_test_mse = acc_test
                 save_path = saver.save(sess, MODEL_LOCATION)
                 print("Model saved in file: %s" % save_path)
 
