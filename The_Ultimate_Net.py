@@ -300,11 +300,11 @@ if __name__ == '__main__':
                 X_batch, y_batch = train_data.get_rand_batch(BATCH_SIZE)
                 X_batch_freq = get_freqs(X_batch)
 
-                # Log accuracy for Tensorboard reports
-                if True: # i % 10 == 0:
-                    step = epoch * EPOCH_SIZE + i
-                    summary_str = mse_summary.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-                    file_write.add_summary(summary_str, step)
+                # # Log accuracy for Tensorboard reports
+                # if True: # i % 10 == 0:
+                #     step = epoch * EPOCH_SIZE + i
+                #     summary_str = mse_summary.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
+                #     file_write.add_summary(summary_str, step)
                 
                 # Train
                 sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
@@ -319,6 +319,12 @@ if __name__ == '__main__':
             #pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
             #print(Y_prob)
+
+            # Log accuracy for Tensorboard reports
+            if True: # i % 10 == 0:
+                step = epoch #* EPOCH_SIZE + i
+                summary_str = mse_summary.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+                file_write.add_summary(summary_str, step)
 
             # Save periodically in case of crashes and @!$#% windows updates
             if SAVE and epoch % 10 == 0:
