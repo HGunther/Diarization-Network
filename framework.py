@@ -45,7 +45,15 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
         batch.append(chunk)
     batch = np.concatenate(batch, axis=0)
 
-    result = evaluate(batch)
+    model = "Model/ultimate_model_supertraining.ckpt"
+    result1 = evaluate(batch, model)
+
+    temp = np.array(batch[:,:,0,:])
+    batch[:,:,0,:] = np.array(batch[:,:,1,:])
+    batch[:,:,1,:] = temp
+    
+    result2 = evaluate(batch, model)
+
 
 
     # Set up post-net processing to write to csv files
