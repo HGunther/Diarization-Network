@@ -37,7 +37,7 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
     # Create chunk generator (data source)
     chunks_gen = ProductionChunks(wave_filename, CHUNCK_SIZE_MS)
     
-    # # Get data
+    # Get data
     batch = []
     for i in range(chunks_gen.get_chunk_count()):
         chunk = chunks_gen.get_chunk(i)
@@ -45,10 +45,11 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
         batch.append(chunk)
     batch = np.concatenate(batch, axis=0)
 
+    # Run data through net
     model = "Model/ultimate_model_supertraining.ckpt"
     result1 = evaluate(batch, model)
 
-    temp = np.array(batch[:,:,0,:])
+    temp = np.array(batch[:,:,0,:])         # Swap channel 1 and 2
     batch[:,:,0,:] = np.array(batch[:,:,1,:])
     batch[:,:,1,:] = temp
     
