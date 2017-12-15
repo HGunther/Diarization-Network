@@ -32,10 +32,11 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
-EPOCH_SIZE = 10
-BATCH_SIZE = 200
-SAVE = False
-RESTORE = True
+EPOCH_SIZE = 5
+BATCH_SIZE = 20
+SAVE = True
+RESTORE = False
+MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
 
 
 # *****************************************************************************
@@ -227,7 +228,7 @@ def evaluate(chunk_batch):
         init.run()
 
         # Restore variables from disk.
-        saver.restore(sess, "tmp/ultimate_model_supertraining.ckpt")
+        saver.restore(sess, MODEL_LOCATION)
         print("Model restored.")
 
         # Get data
@@ -266,7 +267,7 @@ if __name__ == '__main__':
 
         # Restore variables from disk.
         if RESTORE:
-            saver.restore(sess, "tmp/ultimate_model_supertraining.ckpt")
+            saver.restore(sess, MODEL_LOCATION)
             print("Model restored.")
 
         # Prints the structure of the network one layer at a time
@@ -283,7 +284,7 @@ if __name__ == '__main__':
 
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 2))
+        X_test, y_test = test_data.get_rand_batch(int(11 * 60 * 4 * 1))
         # X_test, y_test = test_data.get_all_as_batch()
         X_test_freq = get_freqs(X_test)
         acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
@@ -312,14 +313,16 @@ if __name__ == '__main__':
             acc_train = mse.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
             # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
             # X_test, y_test = test_data.get_all_as_batch()
-            acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            acc_test, pmc, result = sess.run([mse, misclassification_rate, Y_prob], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            #acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             # Percent Mis-classified
-            pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            #pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+            #print(Y_prob)
 
             # Save periodically in case of crashes and @!$#% windows updates
-            if SAVE and epoch % 2 == 0:
-                save_path = saver.save(sess, "tmp/ultimate_model_supertraining.ckpt")
+            if SAVE and epoch % 10 == 0:
+                save_path = saver.save(sess, MODEL_LOCATION)
                 print("Model saved in file: %s" % save_path)
 
         # print('\n*****Testing the net (Post training)*****')
@@ -332,7 +335,7 @@ if __name__ == '__main__':
 
         # Save the variables to disk
         if SAVE:
-            save_path = saver.save(sess, "tmp/ultimate_model_supertraining.ckpt")
+            save_path = saver.save(sess, MODEL_LOCATION)
             print("Model saved in file: %s" % save_path)
         
         file_write.close()
