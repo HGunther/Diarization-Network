@@ -32,20 +32,12 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
-<<<<<<< Updated upstream
-EPOCH_SIZE = 1
-BATCH_SIZE = 1200
-SAVE = True
-RESTORE = False
-MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
-=======
 EPOCH_SIZE = 5
 BATCH_SIZE = 30
 RESTORE = True
 IN_MODEL_LOCATION =  "Model/ultimate_model_experiment3000.ckpt"
 SAVE = True
 OUT_MODEL_LOCATION = "Model/ultimate_model_experiment3000_2.ckpt"
->>>>>>> Stashed changes
 
 
 # *****************************************************************************
@@ -303,10 +295,7 @@ if __name__ == '__main__':
         print('Test MSE:', acc_test, 'pmc:', pmc)
 
         best_test_mse = acc_test * 10
-<<<<<<< Updated upstream
-=======
         best_test_pmc = 1
->>>>>>> Stashed changes
         
         # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
@@ -347,14 +336,9 @@ if __name__ == '__main__':
             # Save periodically in case of crashes and @!$#% windows updates
             if acc_test < best_test_mse: #SAVE and epoch % 2 == 0:
                 best_test_mse = acc_test
-<<<<<<< Updated upstream
-                save_path = saver.save(sess, MODEL_LOCATION)
-                print("Model saved in file: %s" % save_path)
-=======
                 best_test_pmc = pmc
                 save_path = saver.save(sess, OUT_MODEL_LOCATION)
                 print("* New lowest model! Saved as: %s" % save_path)
->>>>>>> Stashed changes
 
         # print('\n*****Testing the net (Post training)*****')
         # for i in range(2):
