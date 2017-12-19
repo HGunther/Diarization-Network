@@ -45,7 +45,21 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
         batch.append(chunk)
     batch = np.concatenate(batch, axis=0)
 
+<<<<<<< Updated upstream
     result = evaluate(batch)
+=======
+    # Run data through net
+    # model = "Model/ultimate_model_supertraining.ckpt"
+    model = "Model/ultimate_model_experiment3000.ckpt"
+    result1 = evaluate(batch, model)
+
+    temp = np.array(batch[:,:,0,:])         # Swap channel 1 and 2
+    batch[:,:,0,:] = np.array(batch[:,:,1,:])
+    batch[:,:,1,:] = temp
+    
+    result2 = evaluate(batch, model)
+
+>>>>>>> Stashed changes
 
 
     # Set up post-net processing to write to csv files

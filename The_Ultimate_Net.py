@@ -32,11 +32,20 @@ NUM_OUTPUTS = 2
 
 # Constants for running and training the network
 NUM_EPOCHS = 2000
+<<<<<<< Updated upstream
 EPOCH_SIZE = 1
 BATCH_SIZE = 1200
 SAVE = True
 RESTORE = False
 MODEL_LOCATION = "Model/ultimate_model_experiment.ckpt"
+=======
+EPOCH_SIZE = 5
+BATCH_SIZE = 30
+RESTORE = True
+IN_MODEL_LOCATION =  "Model/ultimate_model_experiment3000.ckpt"
+SAVE = True
+OUT_MODEL_LOCATION = "Model/ultimate_model_experiment3000_2.ckpt"
+>>>>>>> Stashed changes
 
 
 # *****************************************************************************
@@ -223,7 +232,7 @@ def debug():
     print('Yprob: ', Y_prob)
 
 
-def evaluate(chunk_batch, model=MODEL_LOCATION):
+def evaluate(chunk_batch, model=IN_MODEL_LOCATION):
     print("Preparing to run the network")
     with tf.Session() as sess:
         init.run()
@@ -249,6 +258,7 @@ if __name__ == '__main__':
     files = ['HS_D{0:0=2d}'.format(i) for i in range(1, 38)]
     del files[files.index('HS_D11')]
     del files[files.index('HS_D22')]
+    random.seed(42)
     random.shuffle(files)
 
     training_files = files[:int(0.8 * len(files))]
@@ -268,7 +278,7 @@ if __name__ == '__main__':
 
         # Restore variables from disk.
         if RESTORE:
-            saver.restore(sess, MODEL_LOCATION)
+            saver.restore(sess, IN_MODEL_LOCATION)
             print("Model restored.")
 
         # Prints the structure of the network one layer at a time
@@ -293,6 +303,10 @@ if __name__ == '__main__':
         print('Test MSE:', acc_test, 'pmc:', pmc)
 
         best_test_mse = acc_test * 10
+<<<<<<< Updated upstream
+=======
+        best_test_pmc = 1
+>>>>>>> Stashed changes
         
         # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
@@ -320,7 +334,7 @@ if __name__ == '__main__':
             #acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             # Percent Mis-classified
             #pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-            print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+            print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  pmc: {:1.6f}".format(epoch, acc_train, acc_test, pmc))
             #print(Y_prob)
 
             # Log accuracy for Tensorboard reports
@@ -333,8 +347,14 @@ if __name__ == '__main__':
             # Save periodically in case of crashes and @!$#% windows updates
             if acc_test < best_test_mse: #SAVE and epoch % 2 == 0:
                 best_test_mse = acc_test
+<<<<<<< Updated upstream
                 save_path = saver.save(sess, MODEL_LOCATION)
                 print("Model saved in file: %s" % save_path)
+=======
+                best_test_pmc = pmc
+                save_path = saver.save(sess, OUT_MODEL_LOCATION)
+                print("* New lowest model! Saved as: %s" % save_path)
+>>>>>>> Stashed changes
 
         # print('\n*****Testing the net (Post training)*****')
         # for i in range(2):
@@ -346,7 +366,9 @@ if __name__ == '__main__':
 
         # Save the variables to disk
         if SAVE:
-            save_path = saver.save(sess, MODEL_LOCATION)
+            save_path = saver.save(sess, OUT_MODEL_LOCATION)
             print("Model saved in file: %s" % save_path)
+
+        print("The best model had a pmc of", best_test_pmc)
         
         file_write.close()
