@@ -31,7 +31,7 @@ NUM_INPUTS_FREQ = int(NUM_INPUTS // 2)
 NUM_OUTPUTS = 2
 
 # Constants for running and training the network
-NUM_EPOCHS = 2000
+NUM_EPOCHS = 5 #Default 2000, changed to 5 for code testing purposes
 EPOCH_SIZE = 5
 BATCH_SIZE = 30
 RESTORE = True
