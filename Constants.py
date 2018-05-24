@@ -5,6 +5,8 @@
 # About data
 NUM_CHANNELS = 2
 ORIGINAL_SAMP_RATE_S = 44100
+DATA_FILES_LOCATION = 'Data/'
+
 
 # Downsampled data
 DOWNSAMPLE_FACTOR = 4

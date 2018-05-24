@@ -1,6 +1,7 @@
 from scipy.io import wavfile
 import numpy as np
 import random as rand
+import utils as utils
 from math import ceil
 import csv
 from Constants import *
@@ -19,7 +20,19 @@ class Chunks:
         rand.seed(seed)
 
     def read_files(self, file_list):
-        return list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
+
+        files_to_return = []
+
+        try:
+            files_to_return = list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
+        except FileNotFoundError:
+            #If the file isn't found, attempt to see if the file simply hasn't been downsampled yet and do so.
+            for f in file_list:
+                utils.downsample('Data/' + f + '.wav', 'Data/' + f + '_downsampled.wav', 4)
+            #Retry Reading the files again
+            files_to_return = list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
+        
+        return files_to_return
 
     def read_annot(self, f, ext):
         spk = []
