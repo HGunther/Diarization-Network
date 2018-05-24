@@ -24,19 +24,19 @@ class Chunks:
         files_to_return = []
 
         try:
-            files_to_return = list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
+            files_to_return = list(np.array(wavfile.read(DATA_FILES_LOCATION + f + '_downsampled.wav')[1]) for f in file_list)
         except FileNotFoundError:
             #If the file isn't found, attempt to see if the file simply hasn't been downsampled yet and do so.
             for f in file_list:
-                utils.downsample('Data/' + f + '.wav', 'Data/' + f + '_downsampled.wav', 4)
+                utils.downsample(DATA_FILES_LOCATION + f + '.wav', DATA_FILES_LOCATION + f + '_downsampled.wav', DOWNSAMPLE_FACTOR)
             #Retry Reading the files again
-            files_to_return = list(np.array(wavfile.read('Data/' + f + '_downsampled.wav')[1]) for f in file_list)
+            files_to_return = list(np.array(wavfile.read(DATA_FILES_LOCATION + f + '_downsampled.wav')[1]) for f in file_list)
         
         return files_to_return
 
     def read_annot(self, f, ext):
         spk = []
-        with open('Data/' + f + ext + '.csv', 'r') as f:
+        with open(DATA_FILES_LOCATION + f + ext + '.csv', 'r') as f:
             reader = csv.reader(f)
             # Skip the header line
             next(f)
