@@ -38,32 +38,3 @@ def assert_eq_shapes(shape1, shape2, indices):
     for i in indices:
         errmsg = 'Index ' + str(i) + ': ' + str(shape1[i]) + ' vs ' + str(shape2[i])
         assert shape1[i] == shape2[i], errmsg
-
-    
-####
-# HELPER FUNCTIONS AND CLASSES FOR FRAMEWORK.PY
-####
-
-def ms_to_seconds_as_string(time_in_ms_float):
-    time_in_sec = time_in_ms_float/1000.0
-    return "{:10.4f}".format(time_in_sec)
-
-def format_csv_line_as_list(start_time_in_ms, end_time_in_ms, is_speaking, speaker_id):
-    return [ms_to_seconds_as_string(start_time_in_ms), ms_to_seconds_as_string(end_time_in_ms), str(int(is_speaking)), str(int(speaker_id))]
-
-
-class Smoother:
-    def __init__(self, smoothness=5):
-        self.smoothness = smoothness
-        self.data = []
-        
-    def __add_datapoint(self, next_raw_data_point):
-        # Only keep the last 'smoothness' datapoints
-        if len(self.data) > self.smoothness:
-            self.data.pop(0)
-        self.data.append(next_raw_data_point)
-        
-    def get_smoothed_datapoint(self, next_raw_datapoint):
-        # Average of the last 'smothness' datapoints
-        self.__add_datapoint(next_raw_datapoint)
-        return sum(self.data)/float(len(self.data))
