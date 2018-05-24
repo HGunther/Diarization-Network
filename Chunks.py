@@ -132,17 +132,3 @@ class Chunks:
         y = np.array(y)
 
         return batch, y
-
-# # TEST CODE
-# c = Chunks(('HS_D36', 'HS_D37'), 250)
-# chunk, status = c.get_rand_chunk()
-# print(chunk, chunk.shape)
-
-# chunk, status = c.get_rand_chunk()
-# print(chunk, chunk.shape)
-
-# batch, statuses = c.get_rand_batch(5)
-# print(batch.shape, statuses.shape)
-
-# batch, statuses = c.get_seq_batch()
-# print(batch.shape, statuses.shape)

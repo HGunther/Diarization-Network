@@ -211,7 +211,7 @@ with tf.name_scope("tensorboard"):
 # Functions
 # *****************************************************************************
 
-def debug():
+def print_net():
     """Prints debug information"""
     print('X: ', X)
     print('y: ', y)
@@ -273,23 +273,14 @@ if __name__ == '__main__':
             saver.restore(sess, IN_MODEL_LOCATION)
             print("Model restored.")
 
-        # Prints the structure of the network one layer at a time
-        # debug()
-
-        # print('\n*****Testing the net (Pre training)*****')
-        # for i in range(5):
-        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        #     print(ev, batch_mse)
-
         
 
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
         X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNK) / 1)) 
-        # X_test, y_test = test_data.get_all_as_batch()
+
         X_test_freq = get_freqs(X_test)
+
         acc_test, percent_misclassified = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
         # Percent Mis-classified
         print('Test MSE:', acc_test, 'percent_misclassified:', percent_misclassified)
@@ -297,7 +288,6 @@ if __name__ == '__main__':
         best_test_mse = acc_test * 10
         best_test_percent_misclassified = 1
         
-        # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
         print('\n*****Training the net*****')
         for epoch in range(NUM_EPOCHS):
@@ -305,31 +295,21 @@ if __name__ == '__main__':
                 # Get data
                 X_batch, y_batch = train_data.get_rand_batch(BATCH_SIZE)
                 X_batch_freq = get_freqs(X_batch)
-
-                # # Log accuracy for Tensorboard reports
-                # if True: # i % 10 == 0:
-                #     step = epoch * EPOCH_SIZE + i
-                #     summary_str = mse_summary.eval(feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-                #     file_write.add_summary(summary_str, step)
                 
                 # Train
                 sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
 
             # Measure accuracy
             acc_train, train_summary = sess.run([mse, mse_summary], feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-            # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
-            # X_test, y_test = test_data.get_all_as_batch()
+            
             acc_test, percent_misclassified, test_summary = sess.run([mse, misclassification_rate, mse_summary], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-            #acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-            # Percent Mis-classified
-            #percent_misclassified = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            
+            # Print Percent Mis-classified
             print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  Percent misclassified: {:1.6f}".format(epoch, acc_train, acc_test, percent_misclassified))
-            #print(Y_prob)
-
+            
             # Log accuracy for Tensorboard reports
             if True: # i % 10 == 0:
                 step = epoch #* EPOCH_SIZE + i
-                # summary_str = mse_summary.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
                 tb_test_writer.add_summary(test_summary, step)
                 tb_train_writer.add_summary(train_summary, step)
 
@@ -339,13 +319,6 @@ if __name__ == '__main__':
                 best_test_percent_misclassified = percent_misclassified
                 save_path = saver.save(sess, OUT_MODEL_LOCATION)
                 print("* New lowest model! Saved as: %s" % save_path)
-
-        # print('\n*****Testing the net (Post training)*****')
-        # for i in range(2):
-        #     X_batch, y_batch = train_data.get_rand_batch(EPOCH_SIZE)
-        #     ev = Y_prob.eval(feed_dict={X: X_batch, y: y_batch})
-        #     batch_mse = mse.eval(feed_dict={X: X_batch, y: y_batch})
-        #     print(ev, batch_mse)
         
 
         # Save the variables to disk
