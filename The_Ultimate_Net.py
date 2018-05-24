@@ -1,43 +1,40 @@
-from scipy.fftpack import rfft, fft
-import numpy as np
-import matplotlib.pyplot as plt
-from math import ceil
-from Chunks import Chunks # Our data handling class
-from utils import *
-
-# For debugging
+import os
 import sys
-old_tr = sys.gettrace()
-sys.settrace(None)
+from datetime import datetime
+from math import ceil
+import tensorflow as tf
+from chunks import Chunks  # Our data handling class
+from constants import NUM_SAMPS_IN_CHUNK, NUM_CHANNELS, CHUNK_SIZE_MS, SAMP_RATE_S
+from utility_functions import get_freqs
 
 # To disable warning that building TF from source will make it faster.
 # For more information see:
 # https://www.tensorflow.org/install/install_sources
 # https://stackoverflow.com/questions/41293077/how-to-compile-tensorflow-with-sse4-2-and-avx-instructions
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-import tensorflow as tf
 
+old_tr = sys.gettrace()
+sys.settrace(None)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 sys.settrace(old_tr)
 
 
 # *****************************************************************************
 # CONSTANTS
 # *****************************************************************************
-from Constants import *
+
 # Constants that describe the network
 NUM_INPUTS = NUM_SAMPS_IN_CHUNK
 NUM_INPUTS_FREQ = int(NUM_INPUTS // 2)
 NUM_OUTPUTS = 2
 
 # Constants for running and training the network
-NUM_EPOCHS = 5 #Default 2000, changed to 5 for code testing purposes
+NUM_EPOCHS = 5  # Default 2000, changed to 5 for code testing purposes
 EPOCH_SIZE = 5
 BATCH_SIZE = 30
 RESTORE = True
-IN_MODEL_LOCATION =  "Model/ultimate_model_experiment3000.ckpt"
+IN_MODEL_LOCATION = "Model/ultimate_model_saved_weights.ckpt"
 SAVE = True
-OUT_MODEL_LOCATION = "Model/ultimate_model_experiment3000_2.ckpt"
+OUT_MODEL_LOCATION = "Model/ultimate_model_saved_weights.ckpt"
 
 
 # *****************************************************************************
@@ -45,8 +42,6 @@ OUT_MODEL_LOCATION = "Model/ultimate_model_experiment3000_2.ckpt"
 # *****************************************************************************
 print("Defining layers in tensorflow")
 
-# Info for TensorBoard
-from datetime import datetime
 now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 ROOT_LOGDIR = "tf_logs"
 LOGDIR = "{}/run-{}/".format(ROOT_LOGDIR, now)
@@ -83,25 +78,13 @@ with tf.name_scope("convclust1"):
     conv2_stride_raw = [conv2_time_stride_raw, conv2_channel_stride_raw]
     conv2_pad_raw = "SAME"
 
-    conv1_raw = tf.layers.conv2d(X, filters=conv1_fmaps_raw,
-                                kernel_size=conv1_ksize_raw,
-                                strides=conv1_stride_raw,
-                                padding=conv1_pad_raw,
-                                activation=tf.nn.relu,
-                                name="conv1_raw")
+    conv1_raw = tf.layers.conv2d(X, filters=conv1_fmaps_raw, kernel_size=conv1_ksize_raw, strides=conv1_stride_raw, padding=conv1_pad_raw, activation=tf.nn.relu, name="conv1_raw")
 
     conv1_output_shape_raw = [-1, ceil(NUM_INPUTS / conv1_time_stride_raw), ceil(NUM_CHANNELS / conv1_channel_stride_raw), conv1_fmaps_raw]
-    assert_eq_shapes(conv1_output_shape_raw, conv1_raw.get_shape(), (1,2,3))
 
-    conv2_raw = tf.layers.conv2d(conv1_raw, filters=conv2_fmaps_raw,
-                                    kernel_size=conv2_ksize_raw,
-                                    strides=conv2_stride_raw,
-                                    padding=conv2_pad_raw,
-                                    activation=tf.nn.relu,
-                                    name="conv2_raw")
+    conv2_raw = tf.layers.conv2d(conv1_raw, filters=conv2_fmaps_raw, kernel_size=conv2_ksize_raw, strides=conv2_stride_raw, padding=conv2_pad_raw, activation=tf.nn.relu, name="conv2_raw")
 
     conv2_output_shape_raw = [-1, ceil(conv1_output_shape_raw[1] / conv2_time_stride_raw), ceil(conv1_output_shape_raw[2] / conv2_channel_stride_raw), conv2_fmaps_raw]
-    assert_eq_shapes(conv2_output_shape_raw, conv2_raw.get_shape(), (1,2,3))
 
     # ***************
     # Convolution layer for freqency net
@@ -125,29 +108,20 @@ with tf.name_scope("convclust1"):
     conv2_freq_stride_freq = [conv2_freq_time_stride_freq, conv2_freq_channel_stride_freq]
     conv2_freq_pad_freq = "SAME"
 
-    conv1_freq = tf.layers.conv2d(X_freq, filters=conv1_fmaps_freq, kernel_size=conv1_ksize_freq,
-                            strides=conv1_stride_freq, padding=conv1_pad_freq,
-                            activation=tf.nn.relu, name="conv1_freq")
+    conv1_freq = tf.layers.conv2d(X_freq, filters=conv1_fmaps_freq, kernel_size=conv1_ksize_freq, strides=conv1_stride_freq, padding=conv1_pad_freq, activation=tf.nn.relu, name="conv1_freq")
 
     conv1_output_shape_freq = [-1, ceil(NUM_INPUTS_FREQ / conv1_time_stride_freq), ceil(NUM_CHANNELS / conv1_channel_stride_freq), conv1_fmaps_freq]
-    assert_eq_shapes(conv1_output_shape_freq, conv1_freq.get_shape(), (1,2,3))
 
-    conv2_freq = tf.layers.conv2d(conv1_freq, filters=conv2_freq_fmaps_freq, kernel_size=conv2_freq_ksize_freq,
-                            strides=conv2_freq_stride_freq, padding=conv2_freq_pad_freq,
-                            activation=tf.nn.relu, name="conv2_freq")
+    conv2_freq = tf.layers.conv2d(conv1_freq, filters=conv2_freq_fmaps_freq, kernel_size=conv2_freq_ksize_freq, strides=conv2_freq_stride_freq, padding=conv2_freq_pad_freq, activation=tf.nn.relu, name="conv2_freq")
 
     conv2_output_shape_freq = [-1, ceil(conv1_output_shape_freq[1] / conv2_freq_time_stride_freq), ceil(conv1_output_shape_freq[2] / conv2_freq_channel_stride_freq), conv2_freq_fmaps_freq]
-    assert_eq_shapes(conv2_output_shape_freq, conv2_freq.get_shape(), (1,2,3))
 
 # Avg Pooling layer
 with tf.name_scope("pool3"):
     # Pool3_raw for raw side of network
-    pool3_raw = tf.nn.avg_pool(conv2_raw, ksize=[1, 2, 1, 1],
-                                strides=[1, 2, 1, 1],
-                                padding="VALID")
+    pool3_raw = tf.nn.avg_pool(conv2_raw, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
 
     pool3_raw_output_shape = [-1, conv2_output_shape_raw[1] // 2, conv2_output_shape_raw[2], conv2_fmaps_raw]
-    assert_eq_shapes(pool3_raw_output_shape, pool3_raw.get_shape(), (1,2,3))
 
     pool3_raw_flat = tf.reshape(pool3_raw, shape=[-1, conv2_fmaps_raw * pool3_raw_output_shape[1] * pool3_raw_output_shape[2]])
 
@@ -155,7 +129,6 @@ with tf.name_scope("pool3"):
     pool3_freq = tf.nn.avg_pool(conv2_freq, ksize=[1, 2, 1, 1], strides=[1, 2, 1, 1], padding="VALID")
 
     pool3_freq_output_shape = [-1, conv2_output_shape_freq[1] // 2, conv2_output_shape_freq[2], conv2_freq_fmaps_freq]
-    assert_eq_shapes(pool3_freq_output_shape, pool3_freq.get_shape(), (1,2,3))
 
     pool3_freq_flat = tf.reshape(pool3_freq, shape=[-1, conv2_freq_fmaps_freq * pool3_freq_output_shape[1] * pool3_freq_output_shape[2]])
 
@@ -236,7 +209,7 @@ def evaluate(chunk_batch, model=IN_MODEL_LOCATION):
         # Get data
         X_test = chunk_batch
         X_test_freq = get_freqs(X_test)
-        
+
         print('\nComputing...')
         return Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
@@ -273,11 +246,9 @@ if __name__ == '__main__':
             saver.restore(sess, IN_MODEL_LOCATION)
             print("Model restored.")
 
-        
-
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
-        X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNK) / 1)) 
+        X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNK) / 1))
 
         X_test_freq = get_freqs(X_test)
 
@@ -287,39 +258,38 @@ if __name__ == '__main__':
 
         best_test_mse = acc_test * 10
         best_test_percent_misclassified = 1
-        
 
         print('\n*****Training the net*****')
+
         for epoch in range(NUM_EPOCHS):
             for i in range(EPOCH_SIZE):
                 # Get data
                 X_batch, y_batch = train_data.get_rand_batch(BATCH_SIZE)
                 X_batch_freq = get_freqs(X_batch)
-                
+
                 # Train
                 sess.run(training_op, feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
 
             # Measure accuracy
             acc_train, train_summary = sess.run([mse, mse_summary], feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
-            
+
             acc_test, percent_misclassified, test_summary = sess.run([mse, misclassification_rate, mse_summary], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-            
+
             # Print Percent Mis-classified
             print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  Percent misclassified: {:1.6f}".format(epoch, acc_train, acc_test, percent_misclassified))
-            
+
             # Log accuracy for Tensorboard reports
-            if True: # i % 10 == 0:
-                step = epoch #* EPOCH_SIZE + i
+            if True:  # i % 10 == 0:
+                step = epoch  # * EPOCH_SIZE + i
                 tb_test_writer.add_summary(test_summary, step)
                 tb_train_writer.add_summary(train_summary, step)
 
             # Save periodically in case of crashes and @!$#% windows updates
-            if acc_test < best_test_mse: #SAVE and epoch % 2 == 0:
+            if acc_test < best_test_mse:  # SAVE and epoch % 2 == 0:
                 best_test_mse = acc_test
                 best_test_percent_misclassified = percent_misclassified
                 save_path = saver.save(sess, OUT_MODEL_LOCATION)
                 print("* New lowest model! Saved as: %s" % save_path)
-        
 
         # Save the variables to disk
         if SAVE:
