@@ -354,5 +354,3 @@ if __name__ == '__main__':
             print("Model saved in file: %s" % save_path)
 
         print("The best model had a percent misclassified of", best_test_percent_misclassified)
-        
-        file_write.close()
