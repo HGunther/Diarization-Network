@@ -290,12 +290,12 @@ if __name__ == '__main__':
         X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNK) / 1)) 
         # X_test, y_test = test_data.get_all_as_batch()
         X_test_freq = get_freqs(X_test)
-        acc_test, pmc = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+        acc_test, percent_misclassified = sess.run([mse, misclassification_rate], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
         # Percent Mis-classified
-        print('Test MSE:', acc_test, 'pmc:', pmc)
+        print('Test MSE:', acc_test, 'percent_misclassified:', percent_misclassified)
 
         best_test_mse = acc_test * 10
-        best_test_pmc = 1
+        best_test_percent_misclassified = 1
         
         # Y_prob.eval(feed_dict={X: X_test, X_freq: X_test_freq})
 
@@ -319,11 +319,11 @@ if __name__ == '__main__':
             acc_train, train_summary = sess.run([mse, mse_summary], feed_dict={X: X_batch, X_freq: X_batch_freq, y: y_batch})
             # X_test, y_test = test_data.get_rand_batch(EPOCH_SIZE)
             # X_test, y_test = test_data.get_all_as_batch()
-            acc_test, pmc, test_summary = sess.run([mse, misclassification_rate, mse_summary], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            acc_test, percent_misclassified, test_summary = sess.run([mse, misclassification_rate, mse_summary], feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             #acc_test = mse.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
             # Percent Mis-classified
-            #pmc = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
-            print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  pmc: {:1.6f}".format(epoch, acc_train, acc_test, pmc))
+            #percent_misclassified = misclassification_rate.eval(feed_dict={X: X_test, X_freq: X_test_freq, y: y_test})
+            print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  Percent misclassified: {:1.6f}".format(epoch, acc_train, acc_test, percent_misclassified))
             #print(Y_prob)
 
             # Log accuracy for Tensorboard reports
@@ -336,7 +336,7 @@ if __name__ == '__main__':
             # Save periodically in case of crashes and @!$#% windows updates
             if acc_test < best_test_mse: #SAVE and epoch % 2 == 0:
                 best_test_mse = acc_test
-                best_test_pmc = pmc
+                best_test_percent_misclassified = percent_misclassified
                 save_path = saver.save(sess, OUT_MODEL_LOCATION)
                 print("* New lowest model! Saved as: %s" % save_path)
 
@@ -353,6 +353,6 @@ if __name__ == '__main__':
             save_path = saver.save(sess, OUT_MODEL_LOCATION)
             print("Model saved in file: %s" % save_path)
 
-        print("The best model had a pmc of", best_test_pmc)
+        print("The best model had a percent misclassified of", best_test_percent_misclassified)
         
         file_write.close()

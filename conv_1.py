@@ -215,8 +215,8 @@ if __name__ == '__main__':
         # X_test, y_test = test_data.get_all_as_batch()
         acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
         # Percent Mis-classified
-        pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
-        print('Test MSE:', acc_test, 'pmc:', pmc)
+        percent_misclassified = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
+        print('Test MSE:', acc_test, 'percent_misclassified:', percent_misclassified)
 
         print('\n*****Training the net*****')
         for epoch in range(NUM_EPOCHS):
@@ -239,8 +239,8 @@ if __name__ == '__main__':
             # X_test, y_test = test_data.get_all_as_batch()
             acc_test = mse.eval(feed_dict={X: X_test, y: y_test})
             # Percent Mis-classified
-            pmc = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
-            print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+            percent_misclassified = misclassification_rate.eval(feed_dict={X: X_test, y: y_test})
+            print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "percent_misclassified:", percent_misclassified)
 
             # Save periodically in case of crashes and @!$#% windows updates
             if SAVE and epoch % 5 == 0:

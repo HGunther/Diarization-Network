@@ -240,9 +240,9 @@ with tf.Session() as sess:
     
     acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
 
-    pmc = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
+    percent_misclassified = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
 
-    print('Test MSE:', acc_test, 'pmc:', pmc)
+    print('Test MSE:', acc_test, 'percent_misclassified:', percent_misclassified)
 
     print('\n*****Training the net*****')
     for epoch in range(NUM_EPOCHS):
@@ -263,8 +263,8 @@ with tf.Session() as sess:
         # Measure accuracy
         acc_train = mse.eval(feed_dict={X_freq: X_batch_freq, y: y_batch})
         acc_test = mse.eval(feed_dict={X_freq: X_test_freq, y: y_test})
-        pmc = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
-        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "pmc:", pmc)
+        percent_misclassified = misclassification_rate.eval(feed_dict={X_freq: X_test_freq, y: y_test})
+        print(epoch, "Train MSE:", acc_train, "Test MSE:", acc_test, "percent_misclassified:", percent_misclassified)
 
         # Save periodically
         if SAVE and epoch % 5 == 0:
