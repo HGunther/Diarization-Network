@@ -35,13 +35,13 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
     # nn.initialize()
 
     # Create chunk generator (data source)
-    chunks_gen = ProductionChunks(wave_filename, CHUNCK_SIZE_MS)
+    chunks_gen = ProductionChunks(wave_filename, CHUNK_SIZE_MS)
     
     # # Get data
     batch = []
     for i in range(chunks_gen.get_chunk_count()):
         chunk = chunks_gen.get_chunk(i)
-        chunk = chunk.reshape([1, NUM_SAMPS_IN_CHUNCK, 2, 1])
+        chunk = chunk.reshape([1, NUM_SAMPS_IN_CHUNK, 2, 1])
         batch.append(chunk)
     batch = np.concatenate(batch, axis=0)
 
@@ -68,7 +68,7 @@ with open (speaker1_file, 'w') as file1, open (speaker2_file, 'w') as file2:
         # speaker2_is_talking = round(speaker2_smoother.get_smoothed_datapoint(result[1]))
 
         # # Preactions
-        # current_time_in_ms += CHUNCK_SIZE_MS
+        # current_time_in_ms += CHUNK_SIZE_MS
         
         # # Actions: Write to CSV file and update segment time if needed
         # if speaker1_is_talking != speaker1_is_talking_last_chunk:

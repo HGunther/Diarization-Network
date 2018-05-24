@@ -31,7 +31,7 @@ sys.settrace(old_tr)
 # *****************************************************************************
 from Constants import *
 # Constants that describe the network
-NUM_INPUTS = NUM_SAMPS_IN_CHUNCK
+NUM_INPUTS = NUM_SAMPS_IN_CHUNK
 NUM_OUTPUTS = 2
 
 # Constants for running and training the network
@@ -71,9 +71,9 @@ training_files = files[:int(0.8 * len(files))]
 testing_files = files[int(0.8 * len(files)):]
 
 print("Reading in training data")
-train_data = Chunks(training_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
+train_data = Chunks(training_files, CHUNK_SIZE_MS, samp_rate=SAMP_RATE_S)
 print("Reading in test data")
-test_data = Chunks(testing_files, CHUNCK_SIZE_MS, samp_rate=SAMP_RATE_S)
+test_data = Chunks(testing_files, CHUNK_SIZE_MS, samp_rate=SAMP_RATE_S)
 
 
 # *****************************************************************************
@@ -100,8 +100,8 @@ with tf.name_scope("convclust1"):
     # Number of convolutive maps in layer
     conv1_fmaps = 32
     # Size of each kernel
-    conv1_ksize = [int((20 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK), NUM_CHANNELS]
-    conv1_time_stride = int((10 / CHUNCK_SIZE_MS) * NUM_SAMPS_IN_CHUNCK)
+    conv1_ksize = [int((20 / CHUNK_SIZE_MS) * NUM_SAMPS_IN_CHUNK), NUM_CHANNELS]
+    conv1_time_stride = int((10 / CHUNK_SIZE_MS) * NUM_SAMPS_IN_CHUNK)
     conv1_channel_stride = 1
     conv1_stride = [conv1_time_stride, conv1_channel_stride]
     conv1_pad = "SAME"
