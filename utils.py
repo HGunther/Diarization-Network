@@ -65,7 +65,7 @@ def ms_to_seconds_as_string(time_in_ms_float):
     return "{:10.4f}".format(time_in_sec)
 
 def format_csv_line_as_list(start_time_in_ms, end_time_in_ms, is_speaking, speaker_id):
-    return [ms_to_seconds_str(start_time_in_ms), ms_to_seconds_str(end_time_in_ms), str(int(is_speaking)), str(int(speaker_id))]
+    return [ms_to_seconds_as_string(start_time_in_ms), ms_to_seconds_as_string(end_time_in_ms), str(int(is_speaking)), str(int(speaker_id))]
 
 
 class Smoother:
