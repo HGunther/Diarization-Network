@@ -246,6 +246,9 @@ if __name__ == '__main__':
             saver.restore(sess, IN_MODEL_LOCATION)
             print("Model restored.")
 
+        print('\n*****Printing Network Structure*****')
+        print_net()
+
         print('\n*****Pre-training accuracy*****')
         # Measure accuracy
         X_test, y_test = test_data.get_rand_batch(int((11 * 60 * SAMP_RATE_S / NUM_SAMPS_IN_CHUNK) / 1))
