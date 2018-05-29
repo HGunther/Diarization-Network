@@ -5,7 +5,7 @@ import random as rand
 import numpy as np
 from scipy.io import wavfile
 from software_model import utility_functions as utils
-from constants import ORIGINAL_SAMP_RATE_S, DATA_FILES_LOCATION, DOWNSAMPLE_FACTOR
+from software_model.constants import ORIGINAL_SAMP_RATE_S, DATA_FILES_LOCATION, DOWNSAMPLE_FACTOR
 
 
 class Chunks:

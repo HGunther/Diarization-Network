@@ -3,9 +3,9 @@ import sys
 from datetime import datetime
 from math import ceil
 import tensorflow as tf
-from chunks import Chunks  # Our data handling class
-from constants import NUM_SAMPS_IN_CHUNK, NUM_CHANNELS, CHUNK_SIZE_MS, SAMP_RATE_S
-from utility_functions import get_freqs
+from software_model.chunks import Chunks  # Our data handling class
+from software_model.constants import NUM_SAMPS_IN_CHUNK, NUM_CHANNELS, CHUNK_SIZE_MS, SAMP_RATE_S
+from software_model.utility_functions import get_freqs
 
 # To disable warning that building TF from source will make it faster.
 # For more information see:
