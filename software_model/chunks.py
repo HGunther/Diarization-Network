@@ -4,7 +4,7 @@ from math import ceil
 import random as rand
 import numpy as np
 from scipy.io import wavfile
-import utility_functions as utils
+from software_model import utility_functions as utils
 from constants import ORIGINAL_SAMP_RATE_S, DATA_FILES_LOCATION, DOWNSAMPLE_FACTOR
 
 
