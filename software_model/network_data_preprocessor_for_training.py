@@ -1,28 +1,25 @@
-"""This module is an encapsulator for the AnnotatedChunks class."""
+"""This module is an encapsulator for the NetworkDataPreprocessorForTraining class."""
 import csv
 from math import ceil
 import random as rand
 import numpy as np
-from scipy.io import wavfile
-from software_model import utility_functions as utils
-from software_model.constants import DATA_FILES_LOCATION, DOWNSAMPLE_FACTOR, NUM_SAMPS_IN_CHUNK
-from software_model.chunks import Chunks
+from software_model.constants import DATA_FILES_LOCATION, SAMP_RATE_MS, NUM_SAMPS_IN_CHUNK
+from software_model.network_data_preprocessor import NetworkDataPreprocessor
 
-class AnnotatedChunks(Chunks):
-    """This class is representative of an element of a partioned sound file."""
+class NetworkDataPreprocessorForTraining(NetworkDataPreprocessor):
 
     def __init__(self, file_list):
-        Chunks.__init__(self, file_list)
+        NetworkDataPreprocessor.__init__(self, file_list)
         
-        self._spk1 = self.get_speaker('_Spk1')
-        self._spk2 = self.get_speaker('_Spk2')
+        self._spk1 = self.__get_speaker('_Spk1')
+        self._spk2 = self.__get_speaker('_Spk2')
       
 
-    def get_speaker(self, ext):
+    def __get_speaker(self, ext):
         """This method reads in speaking/non-speaking data from a csv file for a given speaker."""
-        return list(self.read_annotations_from_csv(f, ext) for f in self._file_list)
+        return list(self.__read_annotations_from_csv(f, ext) for f in self._file_list)
 
-    def read_annotations_from_csv(self, file_name, ext):
+    def __read_annotations_from_csv(self, file_name, ext):
         """This method reads and parses the speaking/non-speaking data from a csv file."""
         spk = []
         with open(DATA_FILES_LOCATION + file_name + ext + '.csv', 'r') as file_being_read:
@@ -43,7 +40,7 @@ class AnnotatedChunks(Chunks):
         end = start + NUM_SAMPS_IN_CHUNK
 
         midpoint_samp = (start + end) // 2
-        midpoint_sec = midpoint_samp / self._samp_rate
+        midpoint_sec = midpoint_samp / SAMP_RATE_MS
 
         spk1_bin = np.digitize(midpoint_sec, spk1[:, 0])
         spk2_bin = np.digitize(midpoint_sec, spk2[:, 0])
@@ -85,8 +82,5 @@ class AnnotatedChunks(Chunks):
             chunk = chunk.reshape([1, NUM_SAMPS_IN_CHUNK, 2, 1])
             batch.append(chunk)
             response_variables.append(status)
-
-        batch = np.concatenate(batch, axis=0)
-        response_variables = np.array(response_variables)
 
         return batch, response_variables
