@@ -1,10 +1,8 @@
-import os
-import sys
 from math import ceil
 import tensorflow as tf
 from software_model.constants import NUM_SAMPS_IN_CHUNK, NUM_CHANNELS, CHUNK_SIZE_MS, LOGDIR
 from software_model.network_data_preprocessor import NetworkDataPreprocessor
-
+from software_model.network_data_preprocessor_for_training import NetworkDataPreprocessorForTraining
 
 class NeuralNetwork:
     
@@ -155,7 +153,7 @@ class NeuralNetwork:
         print("Preparing to run the network")
         with tf.Session() as sess:
             # Initialize Network Structure
-            self.variable_initizlizer.run()
+            sess.run(tf.global_variables_initializer())
     
             # Restore variables from disk.
             self.saver.restore(sess, network_location)
@@ -165,8 +163,8 @@ class NeuralNetwork:
             
             # Return Prediction
             return self.Y_prob.eval(feed_dict={self.X: raw_data, self.X_fft: fft_data})
-    """
-    def train_network(self, wav_file_names, out_model_location, in_model_location=None, num_epochs = 2000, epoch_size = 5, batch_size = 30):
+
+    def train_network(self, wav_file_names, out_model_location, in_model_location=None, num_epochs = 2000, epoch_size = 1, batch_size = 2000):
         
         import random as random
         random.shuffle(wav_file_names)
@@ -180,9 +178,9 @@ class NeuralNetwork:
         test_data = NetworkDataPreprocessorForTraining(testing_files)
         
         print("Preparing to run the network")
-        
+
         with tf.Session() as sess:
-            self.variable_initizlizer.run()
+            sess.run(tf.global_variables_initializer())
     
             # Restore variables from disk.
             if in_model_location != None:
@@ -193,9 +191,9 @@ class NeuralNetwork:
             # Measure accuracy
             X_test, y_test = test_data.get_batch_of_random_annotated_chunks(batch_size)
     
-            X_test_freq = apply_fft(X_test)
+            X_test_raw, X_test_fft = NetworkDataPreprocessor.to_tensorflow_readable_evaluation_input(X_test)
     
-            mse_test, percent_misclassified = sess.run([self.mse, self.misclassification_rate], feed_dict={self.X: X_test, self.X_fft: X_test_freq, self.y: y_test})
+            mse_test, percent_misclassified = sess.run([self.mse, self.misclassification_rate], feed_dict={self.X: X_test_raw, self.X_fft: X_test_fft, self.y: y_test})
             # Percent Mis-classified
             print('Test MSE:', mse_test, 'percent_misclassified:', percent_misclassified)
     
@@ -206,14 +204,15 @@ class NeuralNetwork:
                 for i in range(epoch_size):
                     # Get data
                     X_batch, y_batch = train_data.get_batch_of_random_annotated_chunks(batch_size)
-                    X_batch_freq = apply_fft(X_batch)
+                    X_batch_raw, X_batch_fft = NetworkDataPreprocessor.to_tensorflow_readable_evaluation_input(X_batch)
     
                     # Train
-                    sess.run(self.training_op, feed_dict={self.X: X_batch, self.X_fft: X_batch_freq, self.y: y_batch})
+                    sess.run(self.training_op, feed_dict={self.X: X_batch_raw, self.X_fft: X_batch_fft, self.y: y_batch})
     
-                # Measure accuracy
-                mse_train, train_summary = sess.run([self.mse, self.mse_summary], feed_dict={self.X: X_batch, self.X_fft: X_batch_freq, self.y: y_batch})
-                mse_test, percent_misclassified, test_summary = sess.run([self.mse, self.misclassification_rate, self.mse_summary], feed_dict={self.X: X_test, self.X_fft: X_test_freq, self.y: y_test})
+                # Measure accuracy based on testing data
+                mse_train, train_summary = sess.run([self.mse, self.mse_summary], feed_dict={self.X: X_batch_raw, self.X_fft: X_batch_fft, self.y: y_batch})
+                # Measure accuracy based on testing data
+                mse_test, percent_misclassified, test_summary = sess.run([self.mse, self.misclassification_rate, self.mse_summary], feed_dict={self.X: X_test_raw, self.X_fft: X_test_fft, self.y: y_test})
     
                 # Print Percent Mis-classified
                 print("{:03d}  Train MSE: {:1.8f}  Test MSE: {:1.8f}  Percent misclassified: {:1.6f}".format(epoch, mse_train, mse_test, percent_misclassified))
@@ -236,5 +235,5 @@ class NeuralNetwork:
             print("Model saved in file: %s" % save_path)
     
             print("The best model had a percent misclassified of", best_test_percent_misclassified)
-            """
+            
             

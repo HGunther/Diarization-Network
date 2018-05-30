@@ -73,13 +73,11 @@ class NetworkDataPreprocessorForTraining(NetworkDataPreprocessor):
 
     def get_batch_of_random_annotated_chunks(self, batch_size):
         """Returns a batch of the given size composed of random chunks."""
-
         batch = []
         response_variables = []
 
         for _ in range(batch_size):
             chunk, status = self.get_random_annotated_chunk()
-            chunk = chunk.reshape([1, NUM_SAMPS_IN_CHUNK, 2, 1])
             batch.append(chunk)
             response_variables.append(status)
 

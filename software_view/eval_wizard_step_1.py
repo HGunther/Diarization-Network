@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QPushButt
 from PyQt5.QtCore import QSize
 from pathlib import Path
 from PyQt5.Qt import QListWidget, QLineEdit, QMessageBox
-from EvalWizardGUI.EvalWizardStep2 import EvalWizardStep2Window
+from software_view.eval_wizard_step_2 import EvalWizardStep2Window
 
 class EvalWizardStep1Window(QMainWindow):
     def __init__(self):

@@ -1,8 +1,7 @@
-import sys
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore
 from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QPushButton
 from PyQt5.QtCore import QSize   
-from EvalWizardGUI.EvalWizardStep1 import EvalWizardStep1Window 
+from software_view.eval_wizard_step_1 import EvalWizardStep1Window 
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -41,9 +40,3 @@ class MainWindow(QMainWindow):
 
     def wizard_initializer_train_net(self):
         print("Wiz2")
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    mainWin = MainWindow()
-    mainWin.show()
-    sys.exit( app.exec_() )
