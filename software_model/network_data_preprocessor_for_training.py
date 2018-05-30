@@ -6,14 +6,14 @@ import numpy as np
 from software_model.constants import DATA_FILES_LOCATION, SAMP_RATE_MS, NUM_SAMPS_IN_CHUNK
 from software_model.network_data_preprocessor import NetworkDataPreprocessor
 
+
 class NetworkDataPreprocessorForTraining(NetworkDataPreprocessor):
 
     def __init__(self, file_list):
         NetworkDataPreprocessor.__init__(self, file_list)
-        
+
         self._spk1 = self.__get_speaker('_Spk1')
         self._spk2 = self.__get_speaker('_Spk2')
-      
 
     def __get_speaker(self, ext):
         """This method reads in speaking/non-speaking data from a csv file for a given speaker."""
@@ -56,9 +56,9 @@ class NetworkDataPreprocessorForTraining(NetworkDataPreprocessor):
             spk2_status = 0
         else:
             spk2_status = int(spk2[spk2_bin, 1])
-            
+
         chunk = self.get_chunk(file_index, chunk_index)
-        
+
         return chunk, [spk1_status, spk2_status]
 
     def get_random_annotated_chunk(self):

@@ -2,9 +2,9 @@ from software_model.neural_network import NeuralNetwork
 from software_model.network_data_preprocessor import NetworkDataPreprocessor
 from software_model.network_data_postprocessor import NetworkDataPostprocessor
 
+
 class Diarizer:
-    
-    
+
     def __init__(self, neural_network_location):
         self._neural_network_location = neural_network_location
 
