@@ -39,3 +39,7 @@ def evaluate_on_a_particular_file():
 
 if __name__ == '__main__':
     print("Go to line 38 in the file '__main__.py' and uncomment a subsequent line")
+
+    train_net()
+    # show_gui()
+    # evaluate_on_a_particular_file()
