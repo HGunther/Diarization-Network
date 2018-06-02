@@ -3,7 +3,7 @@ import csv
 from math import ceil
 import random as rand
 import numpy as np
-from software_model.constants import DATA_FILES_LOCATION, SAMP_RATE_MS, NUM_SAMPS_IN_CHUNK
+from software_model.constants import DATA_FILES_LOCATION, SAMP_RATE_S, NUM_SAMPS_IN_CHUNK
 from software_model.network_data_preprocessor import NetworkDataPreprocessor
 
 
@@ -40,7 +40,7 @@ class NetworkDataPreprocessorForTraining(NetworkDataPreprocessor):
         end = start + NUM_SAMPS_IN_CHUNK
 
         midpoint_samp = (start + end) // 2
-        midpoint_sec = midpoint_samp / SAMP_RATE_MS
+        midpoint_sec = midpoint_samp / SAMP_RATE_S
 
         spk1_bin = np.digitize(midpoint_sec, spk1[:, 0])
         spk2_bin = np.digitize(midpoint_sec, spk2[:, 0])
