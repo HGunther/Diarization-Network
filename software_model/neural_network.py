@@ -229,7 +229,7 @@ class NeuralNetwork:
                     print("* New lowest model! Saved as: %s" % save_path)
 
             # Save the variables to disk
-            save_path = self.saver.save(sess, out_model_location)
+            save_path = self.saver.save(sess, out_model_location + "_final")
             print("Model saved in file: %s" % save_path)
 
             print("The best model had a percent misclassified of", best_test_percent_misclassified)
