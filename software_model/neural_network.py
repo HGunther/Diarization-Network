@@ -30,7 +30,7 @@ class NeuralNetwork:
 
             # Create convolutive maps
             # Number of convolutive maps in layer
-            conv1_fmaps_raw = 32
+            conv1_fmaps_raw = 64  # 32
             # Size of each kernel
             conv1_ksize_raw = [int((20 / CHUNK_SIZE_MS) * NUM_SAMPS_IN_CHUNK), NUM_CHANNELS]
             conv1_time_stride_raw = int((10 / CHUNK_SIZE_MS) * NUM_SAMPS_IN_CHUNK)
@@ -39,9 +39,9 @@ class NeuralNetwork:
             conv1_pad_raw = "SAME"
 
             # Number of convolutive maps in layer
-            conv2_fmaps_raw = 64
+            conv2_fmaps_raw = 128  # 64
             # Size of each kernel
-            conv2_ksize_raw = [10, NUM_CHANNELS]
+            conv2_ksize_raw = [21, NUM_CHANNELS]  # [10, NUM_CHANNELS]
             conv2_time_stride_raw = 1
             conv2_channel_stride_raw = 1
             conv2_stride_raw = [conv2_time_stride_raw, conv2_channel_stride_raw]
@@ -104,16 +104,16 @@ class NeuralNetwork:
         # Fully connected layer
         with tf.name_scope("fc"):
             # Fully connected layer for raw side of network
-            fc_raw_num_nodes = 30
             fc_raw = tf.layers.dense(pool3_raw_flat, fc_raw_num_nodes, activation=tf.nn.relu, name="fc_raw")
+            fc_raw_num_nodes = 256  # 30
 
             # Fully connected layer for frequency side of network
-            fc_freq_num_nodes = 20
             fc_freq = tf.layers.dense(pool3_freq_flat, fc_freq_num_nodes, activation=tf.nn.relu, name="fc_freq")
+            fc_freq_num_nodes = 128  # 20
 
             # Fully connected layer which takes both other fully connected layers as inputs
-            fc_combine_num_nodes = 10
             fc_combine = tf.layers.dense(tf.concat([fc_raw, fc_freq], axis=1), fc_combine_num_nodes, activation=tf.nn.relu, name="fc_combine")
+            fc_combine_num_nodes = 32  # 10
 
         # Output Layer
         with tf.name_scope("output"):

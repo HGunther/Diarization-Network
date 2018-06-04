@@ -28,7 +28,12 @@ def train_net():
     previously_saved_network_model = None
 
     # Note that you can adjust the default parameters, such as epochs or batch size here too.
-    net.train_network(files_to_train_on, place_to_save_model, in_model_location=previously_saved_network_model)
+    net.train_network(files_to_train_on,
+                      out_model_location=place_to_save_model,
+                      in_model_location=previously_saved_network_model,
+                      num_epochs=20000,
+                      epoch_size=1,
+                      batch_size=100)
 
 
 def evaluate_on_a_particular_file():
